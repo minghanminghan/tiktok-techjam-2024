@@ -9,6 +9,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "dotenv": "^16.4.5",
     "elysia": "^1.0.23",
     "mongoose": "^8.4.1"
   },
