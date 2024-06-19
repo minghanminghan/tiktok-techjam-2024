@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { User } from "./schemas";
+import { User, type UserDocument } from "./schemas";
 
 /**
  * The identifier can be either email or username
@@ -9,6 +9,8 @@ interface LoginInput {
 	identifier: string,
 	password: string,
 }
+
+const SALT_ROUNDS = 10;
 
 class IncorrectPasswordError extends Error {
 	constructor(message: string) {
@@ -35,13 +37,12 @@ async function comparePassword(
 	password: string,
 	hash: string,
 	salt: string
-): Promise<boolean>{
+) {
 	const inputHash = await bcrypt.hash(password, salt);
 	const passwordMatch = await bcrypt.compare(inputHash, hash)
 	if (!passwordMatch) {
-		return false;
+		throw new IncorrectPasswordError("Password does not match");
 	}
-	return true;
 }
 
 /**
@@ -54,6 +55,13 @@ async function comparePassword(
 	const authToken = await loginUser(login);
  */
 async function loginUser({ identifier, password }: LoginInput): Promise<string> {
+	const user = await findUser(identifier);
+	await comparePassword(password, user.password, user.salt);
+	//@TODO: Include authentication token generation
+	return "";
+}
+
+async function findUser(identifier: string): Promise<UserDocument> {
 	const user = await User.findOne({
 		$or: [{ username:identifier }, { email:identifier }]
 	});
@@ -61,13 +69,7 @@ async function loginUser({ identifier, password }: LoginInput): Promise<string> 
 	if (!user) {
 		throw new UserNotFoundError("User not found");
 	}
-
-	const passwordMatch = await comparePassword(password, user.password, user.salt);
-	if (!passwordMatch) {
-		throw new IncorrectPasswordError("Password does not match");
-	}
-	//@TODO: Include authentication token generation
-	return "";
+	return user;
 }
 
 /**
@@ -83,11 +85,7 @@ async function registerUser (
 	password: string, 
 	email: string
 ): Promise<string> {
-	const avaliable = await checkAvaliability(username, email);
-	if (!avaliable) {
-		throw new IdentifierTakenError("Username or email already in use!");
-	}
-
+	await checkAvaliability(username, email);
 	const [salt, hash] = await generateHash(password);
 	const newUser = new User({
 		username: username,
@@ -104,21 +102,50 @@ async function registerUser (
 }
 
 async function generateHash(password: string): Promise<[string, string]> {
-	const salt = await bcrypt.genSalt(10);
+	const salt = await bcrypt.genSalt(SALT_ROUNDS);
 	const hash = await bcrypt.hash(password, salt);
 	return [salt, hash];
 }
 
-async function checkAvaliability(username: string, email: string): Promise<boolean> {
+async function checkAvaliability(username: string, email: string) {
 	const user = await User.findOne({
 		$or: [{ username:username }, { email:email }]
 	});
-	if (user) return false;
-	else return true;
+	if (user) {
+		throw new IdentifierTakenError("Username or email already in use!");
+	}
+}
+
+function isLoginInput(body: any): boolean {
+	if (!(body.identifier && body.password)) {
+		return false;
+	}
+	return (
+	    typeof body === 'object' &&
+	    typeof body.identifier === 'string' &&
+	    typeof body.password === 'string'
+	);
+}
+
+function isRegistrationInput(body: any): boolean {
+	if (!(body.username && body.email && body.password)) {
+		return false;
+	}
+	return (
+	    typeof body === 'object' &&
+	    typeof body.username === 'string' &&
+	    typeof body.email === 'string' &&
+	    typeof body.password === 'string'
+	);
 }
 
 export {
 	type LoginInput,
 	loginUser,
 	registerUser,
+	isLoginInput,
+	isRegistrationInput,
+	IdentifierTakenError,
+	IncorrectPasswordError,
+	UserNotFoundError
 }

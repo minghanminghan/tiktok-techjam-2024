@@ -1,4 +1,4 @@
-import { Schema, model } from "mongoose";
+import { Schema, model, Document } from "mongoose";
 
 enum SongType {
 	spotify,
@@ -11,6 +11,13 @@ const SongSchema = new Schema({
 	release: Number,
 });
 
+interface SongDocument extends Document {
+	title: string,
+	artist: string,
+	type: SongType,
+	release: Number,
+}
+
 /**
  * A Schema that represents a song
  * @param title: string
@@ -22,7 +29,7 @@ const SongSchema = new Schema({
  * @param release: Number
  *   	The year that the song was release in
  */
-const Song = model("Song", SongSchema);
+const Song = model<SongDocument>("Song", SongSchema);
 
 const UserSchema = new Schema({
 	username: { type: String, required: true, unique: true },
@@ -32,6 +39,15 @@ const UserSchema = new Schema({
 	liked: { type: [Song], required: true },
 	disliked: { type: [Song], required: true },
 })
+
+interface UserDocument extends Document {
+	username: string,
+	password: string,
+	salt: string,
+	email: string,
+	liked: [SongDocument],
+	disliked: [SongDocument],
+}
 
 /**
  * User
@@ -48,10 +64,12 @@ const UserSchema = new Schema({
  * @param disliked: [Song]
  *   	List of songs that the user has swiped left on
  */
-const User = model("User", UserSchema);
+const User = model<UserDocument>("User", UserSchema);
 
 export {
 	Song,
 	User,
-	SongType
+	SongType,
+	type UserDocument,
+	type SongDocument,
 }
