@@ -10,6 +10,27 @@ interface LoginInput {
 	password: string,
 }
 
+class IncorrectPasswordError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "IncorrectPasswordError";
+	}
+}
+
+class UserNotFoundError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "UserNotFoundError";
+	}
+}
+
+class IdentifierTakenError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "IdentifierTakenError";
+	}
+}
+
 async function comparePassword(
 	password: string,
 	hash: string,
@@ -38,12 +59,12 @@ async function loginUser({ identifier, password }: LoginInput): Promise<string> 
 	});
 
 	if (!user) {
-		throw new Error("User not found");
+		throw new UserNotFoundError("User not found");
 	}
 
 	const passwordMatch = await comparePassword(password, user.password, user.salt);
 	if (!passwordMatch) {
-		throw new Error("Password does not match");
+		throw new IncorrectPasswordError("Password does not match");
 	}
 	//@TODO: Include authentication token generation
 	return "";
@@ -64,7 +85,7 @@ async function registerUser (
 ): Promise<string> {
 	const avaliable = await checkAvaliability(username, email);
 	if (!avaliable) {
-		throw new Error("Username or email already in use!");
+		throw new IdentifierTakenError("Username or email already in use!");
 	}
 
 	const [salt, hash] = await generateHash(password);
