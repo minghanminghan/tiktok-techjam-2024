@@ -9,6 +9,8 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "bcrypt": "^5.1.1",
     "dotenv": "^16.4.5",
     "elysia": "^1.0.23",
     "mongoose": "^8.4.1"
