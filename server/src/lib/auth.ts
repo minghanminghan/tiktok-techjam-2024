@@ -1,4 +1,6 @@
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { type ObjectId } from "mongoose";
 import { User, type UserDocument } from "./schemas";
 
 /**
@@ -33,6 +35,20 @@ class IdentifierTakenError extends Error {
 	}
 }
 
+class PrivateKeyNotFound extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "PrivateKeyNotFound";
+	}
+}
+
+class PublicKeyNotFound extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "PublicKeyNotFound";
+	}
+}
+
 async function comparePassword(
 	password: string,
 	hash: string,
@@ -57,8 +73,38 @@ async function comparePassword(
 async function loginUser({ identifier, password }: LoginInput): Promise<string> {
 	const user = await findUser(identifier);
 	await comparePassword(password, user.password, user.salt);
-	//@TODO: Include authentication token generation
-	return "";
+	const authToken = generateToken(user._id)
+    return authToken;
+}
+
+function generateToken(userId: ObjectId): string {
+	if (!process.env.PRIVATE_KEY) {
+		throw new PrivateKeyNotFound("Unable to load PRIVATE_KEY from .env file")
+	}
+	const token = jwt.sign({ userId }, process.env.PRIVATE_KEY, { algorithm: "RS256", expiresIn: "1h"});
+	return token;
+}
+
+function authenticateToken(req: any, res: any, next: any) {
+	const token = req.header("Authorization")?.split(' ')[1]
+	if (!token) {
+		return res.status(401).send('Access denied');
+	}
+
+    if (!process.env.PUBLIC_KEY) {
+		return res.status(500).send('Internal Server Error: Unable to load public key from .env');
+    }
+
+	try {
+		const verified = jwt.verify(token, process.env.PUBLIC_KEY);
+		req.user = verified;
+		next();
+	} catch (error) {
+		if (error instanceof jwt.TokenExpiredError) {
+			return res.status(401).send('Token expired');
+		}
+		return res.status(400).send('Invalid token');
+	}
 }
 
 async function findUser(identifier: string): Promise<UserDocument> {
@@ -145,7 +191,10 @@ export {
 	registerUser,
 	isLoginInput,
 	isRegistrationInput,
+	authenticateToken,
 	IdentifierTakenError,
 	IncorrectPasswordError,
-	UserNotFoundError
+	UserNotFoundError,
+	PrivateKeyNotFound,
+    PublicKeyNotFound
 }

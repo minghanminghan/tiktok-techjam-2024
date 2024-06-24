@@ -2,12 +2,12 @@ import { Elysia } from "elysia";
 import * as auth from "../lib/auth";
 
 function userRoutes(app: Elysia) {
-	app.post("/api/v1/login", async (req) => {
-		return await userLogin(req.body);
+	app.post("/api/v1/login", async (req: any, res: any) => {
+		return await userLogin(req.body, res);
 	})
 
 	app.post("/api/v1/register", async (req) => {
-		return await userLogin(req.body);
+		return await userRegister(req.body);
 	})
 }
 
@@ -25,7 +25,7 @@ async function userRegister(body: any): Promise<string> {
 	);
 }
 
-async function userLogin(body: any): Promise<string> {
+async function userLogin(body: any, res: any): Promise<string> {
 		if (!body) {
 			return "Empty body";
 		}
@@ -36,11 +36,22 @@ async function userLogin(body: any): Promise<string> {
 
 		try {
 			const authToken = await auth.loginUser({identifier: identifier, password: password});
-			//return authToken;
-			return "Password token not implemented yet sorry :)";
+			return authToken;
 		} catch (err) {
-			if (err instanceof auth.IncorrectPasswordError) return err.message;
-			else if (err instanceof auth.UserNotFoundError) return err.message;
+			if (err instanceof auth.IncorrectPasswordError) {
+				return err.message;
+			}
+			else if (err instanceof auth.UserNotFoundError) {
+				return err.message;
+			}
+			else if (err instanceof auth.PrivateKeyNotFound) {
+                res.status(500).send(err.message);
+				return err.message;
+			}
+			else if (err instanceof auth.PublicKeyNotFound) {
+                res.status(500).send(err.message);
+                return err.message;
+			}
 			else {
 				console.log(`Unknown error unable to login ${err}`);
 				return `Unknown error unable to login ${err}`;

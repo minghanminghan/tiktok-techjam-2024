@@ -1,4 +1,4 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, Document, type ObjectId } from "mongoose";
 
 enum SongType {
 	spotify,
@@ -12,6 +12,7 @@ const SongSchema = new Schema({
 });
 
 interface SongDocument extends Document {
+	_id: ObjectId,
 	title: string,
 	artist: string,
 	type: SongType,
@@ -41,6 +42,7 @@ const UserSchema = new Schema({
 })
 
 interface UserDocument extends Document {
+	_id: ObjectId,
 	username: string,
 	password: string,
 	salt: string,
