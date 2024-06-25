@@ -1,35 +1,30 @@
 import React, {useState} from 'react'
 import {router} from 'expo-router'
 import Animated, {useSharedValue, withTiming, useAnimatedStyle, Easing} from "react-native-reanimated"
-import { Text, View, Image, StyleSheet, useWindowDimensions, ScrollView } from "react-native";
-import Logo from '../assets/images/music-app.png';
+import { Text, View, StyleSheet,  ScrollView } from "react-native";
 import CustomInput from '../components/CustomInput'
 import CustomButton from '../components/CustomButton'
 
-const onSignInPressed = () => {
-  console.warn("Signed in");
+const onRegisterPressed = () => {
+  console.log("Registered");
 }
 
-const onForgotPasswordPressed = () => {
-  console.warn("Forgot Password");
-}
+const onHaveAnAccountPressed = () => {
+    router.back()
+  }
 
-const onNoAccountPressed = () => {
-  console.warn("User has no account");
-  router.push("/SignUpScreen");
-}
-
-export default function index() {
+export default function SignUpScreen() {
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const {height} = useWindowDimensions();
+  const [confirmPassword, setConfirmPassword] = useState('');
+  
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
     <View style = {styles.root}>
-      <Image 
-        source = {Logo} 
-        style={styles.logo}>
-      </Image>
+        <Text style = {styles.title}>
+            Create an Account!
+        </Text>
 
       <CustomInput 
         placeholder={"Username"} 
@@ -38,20 +33,28 @@ export default function index() {
         secureTextEntry={false}/>
 
       <CustomInput
+        placeholder={"Email"} 
+        value = {email} 
+        setValue = {setEmail}
+        secureTextEntry={false}/>
+
+      <CustomInput
         placeholder={"Password"} 
         value = {password} 
         setValue = {setPassword} 
         secureTextEntry={true}/>
 
-      <CustomButton text={"Sign In"} onPress={onSignInPressed}/>
+      <CustomInput
+        placeholder={"Confirm Password"} 
+        value = {confirmPassword} 
+        setValue = {setConfirmPassword} 
+        secureTextEntry={true}/>
+
+      <CustomButton text={"Register"} onPress={onRegisterPressed}/>
       <CustomButton 
-        text={"Forgot Password?"} 
-        onPress={onForgotPasswordPressed}
-        type = "TERTIARY"/>
-      <CustomButton 
-        text={"Don't have an account?"} 
-        onPress={onNoAccountPressed}
-        type = "TERTIARY"/>
+        text={"Have an Account?"} 
+        onPress={onHaveAnAccountPressed}
+        type={"TERTIARY"}/>
     </View>
     </ScrollView>
   );
@@ -72,4 +75,10 @@ const styles = StyleSheet.create({
     marginVertical: 15,
     resizeMode:'contain',
   },
+  title:{
+    fontSize:24,
+    fontWeight:'bold',
+    color:'#051c60',
+    margin: 10,
+  }
 });
