@@ -43,11 +43,10 @@ export default function index() {
         setValue = {setPassword} 
         secureTextEntry={true}/>
 
-      <CustomButton text={"Sign In"} onPress={onSignInPressed}/>
       <CustomButton 
-        text={"Forgot Password?"} 
-        onPress={onForgotPasswordPressed}
-        type = "TERTIARY"/>
+        text={"Sign In"} 
+        onPress={onSignInPressed}/>
+        
       <CustomButton 
         text={"Don't have an account?"} 
         onPress={onNoAccountPressed}
