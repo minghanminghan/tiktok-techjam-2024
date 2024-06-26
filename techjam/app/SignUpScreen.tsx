@@ -2,8 +2,11 @@ import React, {useState} from 'react'
 import {router} from 'expo-router'
 import Animated, {useSharedValue, withTiming, useAnimatedStyle, Easing} from "react-native-reanimated"
 import { Text, View, StyleSheet,  ScrollView } from "react-native";
+import {SafeAreaView} from 'react-native-safe-area-context';
+
 import CustomInput from '../components/CustomInput'
 import CustomButton from '../components/CustomButton'
+
 
 const onRegisterPressed = () => {
   console.log("Registered");
@@ -20,6 +23,7 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   
   return (
+    <SafeAreaView style={{flex:1}}>
     <ScrollView showsVerticalScrollIndicator={false}>
     <View style = {styles.root}>
         <Text style = {styles.title}>
@@ -57,6 +61,7 @@ export default function SignUpScreen() {
         type={"TERTIARY"}/>
     </View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

@@ -37,7 +37,10 @@ export default function RootLayout() {
           fontWeight: 'bold',
         },
       }}>
-        <Stack.Screen name="index"/>
+        <Stack.Screen name="index" options={{headerShown:false}}/>
+        <Stack.Screen name="(tabs)" options={{headerShown:false}} />
+        <Stack.Screen name="SignUpScreen" options={{headerShown:false}} />
+        <Stack.Screen name="SignInError" options={{headerShown:false}} />
     </Stack>
     </ThemeProvider>
   );

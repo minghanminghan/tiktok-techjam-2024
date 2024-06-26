@@ -1,13 +1,27 @@
 import React, {useState} from 'react'
 import {router} from 'expo-router'
 import Animated, {useSharedValue, withTiming, useAnimatedStyle, Easing} from "react-native-reanimated"
+
+import {SafeAreaView} from 'react-native-safe-area-context';
 import { Text, View, Image, StyleSheet, useWindowDimensions, ScrollView } from "react-native";
 import Logo from '../assets/images/music-app.png';
 import CustomInput from '../components/CustomInput'
 import CustomButton from '../components/CustomButton'
 
-const onSignInPressed = () => {
-  console.warn("Signed in");
+// this is just hardcoded for now so that when you input username and password
+// it logs in to the home page
+
+const hardUsername = "Username"
+const hardPassword = "Password"
+
+const onSignInPressed = (username, password) => {
+  // temporary sign in 
+  if (username == hardUsername && password == hardPassword){
+    router.navigate('/(tabs)/HomePage');
+  }
+  else{
+    router.navigate("/SignInError");
+  }
 }
 
 const onForgotPasswordPressed = () => {
@@ -24,8 +38,12 @@ export default function index() {
   const [password, setPassword] = useState('');
   const {height} = useWindowDimensions();
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
+    <SafeAreaView style = {{flex:1}}>
+      <ScrollView showsVerticalScrollIndicator={false} >
     <View style = {styles.root}>
+    <Text style = {styles.title}>
+        Welcome! Sign in to your account. 
+      </Text>
       <Image 
         source = {Logo} 
         style={styles.logo}>
@@ -45,7 +63,7 @@ export default function index() {
 
       <CustomButton 
         text={"Sign In"} 
-        onPress={onSignInPressed}/>
+        onPress={()=>{onSignInPressed(username, password)}}/>
         
       <CustomButton 
         text={"Don't have an account?"} 
@@ -53,12 +71,13 @@ export default function index() {
         type = "TERTIARY"/>
     </View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root:{
-    alignItems: "center",
+    alignItems: 'center',
     padding: 20,
     flex: 1,
     backgroundColor: 'F9FBFC'
@@ -70,5 +89,11 @@ const styles = StyleSheet.create({
     //maxHeight: 200,
     marginVertical: 15,
     resizeMode:'contain',
+  },
+  title:{
+    fontSize:24,
+    fontWeight:'bold',
+    color:'#051c60',
+    margin:10,
   },
 });
