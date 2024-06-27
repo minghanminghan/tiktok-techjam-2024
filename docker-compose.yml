@@ -1,6 +1,19 @@
 services:
-  server:
-    image: techjam-server-image
-    build: ./server
-    ports:
-      - "8080:8080"
+    reverseproxy:
+        image: techjam-reverseproxy-image
+        build: ./reverseproxy
+        ports: 
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./reverseproxy/conf.d:/etc/nginx/conf.d
+            - ./reverseproxy/ssl:/etc/nginx/ssl
+            - ./reverseproxy/html:/usr/share/nginx/html
+            - ./reverseproxy/logs:/var/log/nginx
+        depends_on:
+            - server
+    server:
+        image: techjam-server-image
+        build: ./server
+        ports:
+            - "8080:8080"
