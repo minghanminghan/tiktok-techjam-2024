@@ -1,15 +1,16 @@
-import { Elysia } from "elysia";
+import { Elysia, type Context } from "elysia";
 import * as auth from "../lib/auth";
 
 function userRoutes(app: Elysia) {
-	app.post("/api/v1/login", async (req: any, res: any) => {
-		return await userLogin(req.body, res);
+	app.post("/api/v1/login", async (cxt: Context) => {
+		return await userLogin(cxt);
 	})
 
 	app.post("/api/v1/register", async (req) => {
 		return await userRegister(req.body);
 	})
 }
+
 
 async function userRegister(body: any): Promise<string> {
 	if (!body) {
@@ -25,13 +26,20 @@ async function userRegister(body: any): Promise<string> {
 	);
 }
 
-async function userLogin(body: any, res: any): Promise<string> {
+async function parseBody<T>(request: Request): Promise<T> {
+    const body = await request.json();
+    return body as T;
+}
+
+async function userLogin(ctx: Context): Promise<string> {
+        const body = ctx.request.body;
 		if (!body) {
 			return "Empty body";
 		}
 		if (!auth.isLoginInput) {
 			return "Invalid input: requires body properties 'identifier' and 'password' as string";
 		}
+
 		const { identifier, password }: auth.LoginInput = body as auth.LoginInput;
 
 		try {

@@ -4,6 +4,7 @@ enum SongType {
 	spotify,
 	uploaded
 }
+
 const SongSchema = new Schema({
 	title: String,
 	artist: String,
@@ -37,6 +38,7 @@ const UserSchema = new Schema({
 	password: { type: String, required: true },
 	salt: { type: String, required: true },
 	email: { type: String, required: true, unique: true },
+    spotify_token: { type: String },
 	liked: { type: [Song], required: true },
 	disliked: { type: [Song], required: true },
 })
