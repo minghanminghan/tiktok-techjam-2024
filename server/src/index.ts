@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { config } from "dotenv";
 import userRoutes from "./routes/userRoutes";
+import spotifyRoutes from "./routes/userRoutes";
 
 //NECESSARY TO IMPORT ENV FILES
 config();
@@ -8,6 +9,7 @@ config();
 const app = new Elysia()
 
 userRoutes(app);
+spotifyRoutes(app);
 
 app.get("/api/v1/", () => {
 	return "This is the api for tiktok app";
