@@ -24,24 +24,25 @@ export default function SignUpScreen() {
   const onRegisterPressed = async () => {
 
     setSuccessMessage(`button pressed`)
-/*
-    const response = await fetch('https://18.218.123.255:8080/api/v1/register', {
-      method: 'POST', 
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username,
-        email,
-        password,
-      }),
-    })
-      .then(response => response.json())
-      .then(data => {
-        setSuccessMessage(`Registered successfully!`)
-        router.navigate('/(tabs)/HomePage')
-      })
-      .catch(error => {
-        setSuccessMessage(`Error: ${error}`);
-      });
+    const response = await fetch('https://192.168.0.108:8081/api/v1/register', {
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username,
+            email,
+            password,
+          }),
+        })
+          .then(response => response.json())
+          .then(data => {
+            setSuccessMessage(`Registered successfully!`)
+            router.navigate('/(tabs)/HomePage')
+          })
+          .catch(error => {
+            setSuccessMessage(`Error: ${error}`);
+          });
+  /*
+  Eric's address: 18.218.123.255:8080
     */
 }
   return (

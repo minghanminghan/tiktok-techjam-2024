@@ -8,7 +8,7 @@ import CustomButton from '../../components/CustomButton'
 const onSignOutPressed = () => {
   router.back()
 }
-
+ 
 export default function HomePage() {
     return (
       <SafeAreaView style={{flex:1}}>
