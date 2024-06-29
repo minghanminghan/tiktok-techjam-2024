@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { View, Text, StyleSheet, Image, Platform } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import ncslogo from '../../assets/images/ncslogo'
 
 import { Collapsible } from '@/components/Collapsible';
 import { ExternalLink } from '@/components/ExternalLink';
@@ -13,6 +14,7 @@ export default function TabTwoScreen() {
     <SafeAreaView style = {{flex:1}}>
     <View style = {styles.root}>
       <Text style = {styles.title}> Explore Music! </Text>
+      <Image source={ncslogo} style={styles.image}></Image>
     </View>
     </SafeAreaView>
   );
@@ -30,5 +32,11 @@ const styles = StyleSheet.create({
     fontWeight:'bold',
     color:'#051c60',
     margin: 10,
+  },
+  image:{
+    width: '60%',
+    height: '40%',
+    marginVertical: 15,
+    resizeMode:'contain',
   }
 });

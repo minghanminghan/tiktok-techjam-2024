@@ -8,9 +8,7 @@ import CustomInput from '../components/CustomInput'
 import CustomButton from '../components/CustomButton'
 
 
-const onRegisterPressed = () => {
-  console.log("Registered");
-}
+
 
 const onHaveAnAccountPressed = () => {
     router.back()
@@ -21,7 +19,31 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [SuccessMessage, setSuccessMessage] = useState('');
   
+  const onRegisterPressed = async () => {
+
+    setSuccessMessage(`button pressed`)
+/*
+    const response = await fetch('https://18.218.123.255:8080/api/v1/register', {
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username,
+        email,
+        password,
+      }),
+    })
+      .then(response => response.json())
+      .then(data => {
+        setSuccessMessage(`Registered successfully!`)
+        router.navigate('/(tabs)/HomePage')
+      })
+      .catch(error => {
+        setSuccessMessage(`Error: ${error}`);
+      });
+    */
+}
   return (
     <SafeAreaView style={{flex:1}}>
     <ScrollView showsVerticalScrollIndicator={false}>
@@ -29,6 +51,10 @@ export default function SignUpScreen() {
         <Text style = {styles.title}>
             Create an Account!
         </Text>
+
+    { SuccessMessage ? (
+      <Text style = {styles.successMessage}>{SuccessMessage} </Text>
+    ) : null}
 
       <CustomInput 
         placeholder={"Username"} 
@@ -54,7 +80,9 @@ export default function SignUpScreen() {
         setValue = {setConfirmPassword} 
         secureTextEntry={true}/>
 
-      <CustomButton text={"Register"} onPress={onRegisterPressed}/>
+      <CustomButton 
+        text={"Register"} 
+        onPress={()=>{onRegisterPressed(username,email,password,confirmPassword)}}/>
       <CustomButton 
         text={"Have an Account?"} 
         onPress={onHaveAnAccountPressed}
@@ -85,5 +113,10 @@ const styles = StyleSheet.create({
     fontWeight:'bold',
     color:'#051c60',
     margin: 10,
+  },
+  successMessage:{
+    fontSize: 16,
+    color: 'gray',
+    padding:5
   }
 });
