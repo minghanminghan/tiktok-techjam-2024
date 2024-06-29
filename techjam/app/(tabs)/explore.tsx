@@ -2,11 +2,9 @@ import React, {useState} from 'react';
 import { View, Text, StyleSheet, Image, useWindowDimensions } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
-import ncslogo from '../../assets/images/ncslogo.png';
-import feinlogo from '../../assets/images/fe!nlogo.png';
-import seasonslogo from '../../assets/images/seasonslogo.png';
+import { playListData } from '@/assets/songs/playListData';
 
-
+import TrackPlayer from 'react-native-track-player';
 
 import MusicCard from '@/components/MusicCard';
 
@@ -30,7 +28,7 @@ const ROTATION = 35;
 export default function TabTwoScreen() {
   //to handle the current index of the song being played
   const [currentIndex, setCurrentIndex] = useState(0);
-  //const currentSong = songs[currentIndex];
+  const currentSong = playListData[currentIndex];
   const {width: screenWidth} = useWindowDimensions();
   const translateX = useSharedValue<number>(0);
   const rotate = useDerivedValue(
@@ -67,9 +65,9 @@ export default function TabTwoScreen() {
         <Animated.View style = {animatedStyles}> 
         <MusicCard 
           style = {animatedStyles} 
-          image={feinlogo}
-          title={"FE!N"}
-          artist={"Travis Scott"}/>
+          image={currentSong.artwork}
+          title={currentSong.title}
+          artist={currentSong.artist}/>
         </Animated.View>
       </GestureDetector>
     </GestureHandlerRootView>

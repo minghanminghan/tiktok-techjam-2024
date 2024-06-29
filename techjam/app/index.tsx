@@ -5,8 +5,10 @@ import Animated, {useSharedValue, withTiming, useAnimatedStyle, Easing} from "re
 import {SafeAreaView} from 'react-native-safe-area-context';
 import { Text, View, Image, StyleSheet, useWindowDimensions, ScrollView } from "react-native";
 import Logo from '../assets/images/music-app.png';
-import CustomInput from '../components/CustomInput'
-import CustomButton from '../components/CustomButton'
+import CustomInput from '../components/CustomInput';
+import CustomButton from '../components/CustomButton';
+
+import TrackPlayer from 'react-native-track-player';
 
 // this is just hardcoded for now so that when you input username and password
 // it logs in to the home page
