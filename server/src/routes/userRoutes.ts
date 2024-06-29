@@ -12,7 +12,9 @@ function userRoutes(app: Elysia) {
 }
 
 
-async function userRegister(body: any): Promise<string> {
+async function userRegister(ctx: Context): Promise<string> {
+
+    const body = await ctx.request.json;
 	if (!body) {
 		return "Empty body"
 	}

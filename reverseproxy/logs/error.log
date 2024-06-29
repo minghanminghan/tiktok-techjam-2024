@@ -1,0 +1,1 @@
+2024/06/27 16:26:28 [emerg] 1#1: cannot load certificate "/etc/nginx/ssl/fullchain.pem": BIO_new_file() failed (SSL: error:80000002:system library::No such file or directory:calling fopen(/etc/nginx/ssl/fullchain.pem, r) error:10000080:BIO routines::no such file)
