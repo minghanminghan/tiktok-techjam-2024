@@ -1,18 +1,18 @@
 import React, {useEffect, useState} from 'react';
 import { View, Text, StyleSheet, Image, useWindowDimensions, ImageBackground } from 'react-native';
-import TrackPlayer from 'react-native-track-player';
-import { playbackService, setUpPlayer, addTracks } from './PlayBack';
+//import TrackPlayer from 'react-native-track-player';
+//import { playbackService, setUpPlayer, addTracks } from './PlayBack';
 
-import { playListData } from '@/assets/songs/playListData';
+//import { playListData } from '@/assets/songs/playListData';
 
 // AppRegistry.registerComponent(...);
-TrackPlayer.registerPlaybackService(() => playbackService);
+//TrackPlayer.registerPlaybackService(() => playbackService);
 
 // service.js
-module.exports = async function() {
+//module.exports = async function() {
   // This service needs to be registered for the module to work
   // but it will be used later in the "Receiving Events" section
-}
+//}
 
 const MusicCard = (props) => {
 

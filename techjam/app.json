@@ -19,12 +19,16 @@
           "audio"
         ]
       },
-      "bundleIdentifier": "com.anonymous.techjam"
+      "bundleIdentifier": "com.anonymous.techjam",
+      "runtimeVersion": "1.0.0"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "web": {
@@ -37,6 +41,17 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "069c16ed-338c-4c86-87c1-6ac8d6862aee"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/069c16ed-338c-4c86-87c1-6ac8d6862aee"
     }
   }
 }
