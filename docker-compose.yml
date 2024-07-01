@@ -19,12 +19,20 @@ services:
             - "8080:8080"
         env_file:
             - server.env
+        depends_on:
+            database:
+                condition: service_healthy
     database:
         image: techjam-database-image
         build: ./database
         ports:
-            - "8081:8081"
+            - "8081:27017"
         volumes:
             - ./database/data:/data/db
         env_file:
             - database.env
+        healthcheck:
+            test: ["CMD-SHELL", "mongo --eval 'db.adminCommand('ping')'"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
