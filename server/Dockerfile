@@ -1,10 +1,8 @@
-FROM oven/bun:debian
+FROM rust:slim-bookworm
 
-COPY package.json ./
-COPY bun.lockb ./
-COPY src ./
-COPY .env ./
+COPY src src
+COPY Cargo.toml Cargo.toml
 
-EXPOSE 8080
-RUN bun install
-CMD bun --bun run index.ts
+RUN cargo install --path .
+
+CMD ["techjam-server"]
