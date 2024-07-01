@@ -1,4 +1,4 @@
-FROM rust:slim-bookworm
+FROM rust:1.76
 
 COPY src src
 COPY Cargo.toml Cargo.toml
