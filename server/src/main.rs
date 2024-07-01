@@ -1,7 +1,7 @@
 use axum::Router;
 use mongodb::{
     Client,
-    options::{ClientOptions, ResolverConfig},
+    options::ClientOptions,
     Collection
 };
 use std::error::Error;

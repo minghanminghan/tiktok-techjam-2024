@@ -30,17 +30,15 @@ impl Debug for LoginError {
 }
 
 pub async fn login(user_collection: Arc<Collection<User>>, identifier: &str, password: &str) -> Result<String, LoginError> {
-    let user: User;
-    match find_user(user_collection.clone(), identifier).await {
-        Ok(u) => user = u,
+    let user: User = match find_user(user_collection.clone(), identifier).await {
+        Ok(u) => u,
         Err(err) => return Err(err)
-    }
+    };
 
-    let authenticated: bool;
-    match authenticate_user(password, &user.password) {
-        Ok(v) => authenticated = v,
+    let authenticated: bool = match authenticate_user(password, &user.password) {
+        Ok(a) => a,
         Err(err) => return Err(err)
-    }
+    };
 
     if !authenticated {
         return Err(LoginError{
@@ -49,16 +47,15 @@ pub async fn login(user_collection: Arc<Collection<User>>, identifier: &str, pas
         });
     }
 
-    let token: String;
-    match generate_jwt(&user._id.to_string()) {
-        Ok(t) => token = t,
+    let token: String = match generate_jwt(&user._id.to_string()) {
+        Ok(t) => t,
         Err(_) => return Err(LoginError{
             kind: "FailedTokenGeneration".to_string(),
             message: "Failed to generate JWT token".to_string()
         }),
-    }
+    };
 
-    return Ok(token);
+    Ok(token)
 }
 
 async fn find_user(user_collection: Arc<Collection<User>>, identifier: &str) -> Result<User, LoginError>{
@@ -72,10 +69,10 @@ async fn find_user(user_collection: Arc<Collection<User>>, identifier: &str) -> 
     let result = user_collection.find_one(filter).await;
     match result {
         Ok(user) => {
-            if user.is_some() {
-                return Ok(user.expect("Something really fucked lmao"));
+            if let Some(user) = user {
+                Ok(user)
             } else {
-                return Err(LoginError {
+                Err(LoginError {
                         kind: "UserNotFound".to_string(),
                         message: "Could not find user based on given identifier".to_string()
                 })
@@ -92,7 +89,7 @@ async fn find_user(user_collection: Arc<Collection<User>>, identifier: &str) -> 
 fn authenticate_user(password: &str, hash: &str) -> Result<bool, LoginError> {
     match verify(password, hash) {
         Ok(v) => Ok(v),
-        Err(err) => return Err(LoginError{
+        Err(err) => Err(LoginError{
             kind: "LoginAttemptFailed".to_string(),
             message: "Internal login attempt failure".to_string()
         }),
@@ -126,7 +123,7 @@ pub fn verify_jwt(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
     let public_key = env::var("JWT_PUBLIC_KEY").expect("JWT_PUBLIC_KEY env variable not found");
 
     // Define the validation parameters
-    let mut validation = Validation::new(Algorithm::HS256);
+    let mut validation = Validation::new(Algorithm::RS256);
     validation.validate_exp = true;
 
     // Decode and validate the token

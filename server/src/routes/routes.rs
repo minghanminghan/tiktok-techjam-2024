@@ -2,12 +2,9 @@ use axum::{
     routing::get,
     Router
 };
-use mongodb::Collection;
 
 use crate::routes::handle_get;
 use crate::routes::{spotify_routes::spotify_routes, user_routes::user_routes};
-use crate::User;
-use crate::Song;
 use crate::AppState;
 
 /**

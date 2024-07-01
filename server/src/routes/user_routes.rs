@@ -59,11 +59,8 @@ async fn post_login(State(appstate): State<AppState>, Json(payload): Json<LoginI
 }
 
 async fn post_register(State(appstate): State<AppState>, Json(payload): Json<RegistrationInput>) -> Response {
-    let user: User;
-    match register::register(appstate.user_collection.clone(), &payload.username, &payload.email, &payload.password).await {
-        Ok(v) => {
-            user = v
-        },
+    let user: User = match register::register(appstate.user_collection.clone(), &payload.username, &payload.email, &payload.password).await {
+        Ok(u) => u,
         Err(err) => {
             return Response::builder()
                 .status(StatusCode::BAD_REQUEST)
