@@ -25,7 +25,7 @@ import {
 } from 'react-native-gesture-handler';
 
 const ROTATION = 35;
-const SWIPE_VELOCITY = 800;
+const SWIPE_VELOCITY = 1000;
 
 export default function TabTwoScreen() {
   //to handle the current index of the song being played
