@@ -78,7 +78,7 @@ pub async fn spotify_auth(user_collection: Arc<Collection<User>>, user_id: Objec
         Some(u) => u,
         None => return Err(SpotifyLoginError {
             kind: "UserNotFound".to_string(),
-            message: format!("Failed to find user with id: {}", user_id.to_string()).to_string(),
+            message: format!("Failed to find user with id: {}", &user_id),
         })
     };
 
@@ -214,7 +214,7 @@ async fn spotify_code() -> Result<SpotifyCode, reqwest::Error> {
     match response {
         Ok(response) => {
             let code: Result<SpotifyCode, _> = response.json().await;
-            return code;
+            code
         }
         Err(err) => Err(err),
     }

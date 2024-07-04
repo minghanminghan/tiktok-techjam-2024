@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use mongodb::bson::{Bson, oid::ObjectId};
+use mongodb::bson::oid::ObjectId;
 
 use crate::spotify::auth::SpotifyToken;
 use crate::schemas::song::Song;
