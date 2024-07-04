@@ -1,18 +1,18 @@
-use mongodb::{Collection, bson::doc};
 use bcrypt::verify;
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use mongodb::{bson::doc, Collection};
+use serde::{Deserialize, Serialize};
+use std::env;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
-use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation, Algorithm};
-use serde::{Serialize, Deserialize};
-use std::time::{SystemTime, UNIX_EPOCH};
-use std::env;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::User;
 
 pub struct LoginError {
     kind: String,
-    message: String
+    message: String,
 }
 
 // Implement std::fmt::Display for LoginError
@@ -29,36 +29,45 @@ impl Debug for LoginError {
     }
 }
 
-pub async fn login(user_collection: Arc<Collection<User>>, identifier: &str, password: &str) -> Result<String, LoginError> {
+pub async fn login(
+    user_collection: Arc<Collection<User>>,
+    identifier: &str,
+    password: &str,
+) -> Result<String, LoginError> {
     let user: User = match find_user(user_collection.clone(), identifier).await {
         Ok(u) => u,
-        Err(err) => return Err(err)
+        Err(err) => return Err(err),
     };
 
     let authenticated: bool = match authenticate_user(password, &user.password) {
         Ok(a) => a,
-        Err(err) => return Err(err)
+        Err(err) => return Err(err),
     };
 
     if !authenticated {
-        return Err(LoginError{
+        return Err(LoginError {
             kind: "IncorrectPassword".to_string(),
-            message: "Wrong password".to_string()
+            message: "Wrong password".to_string(),
         });
     }
 
     let token: String = match generate_jwt(&user._id.to_string()) {
         Ok(t) => t,
-        Err(_) => return Err(LoginError{
-            kind: "FailedTokenGeneration".to_string(),
-            message: "Failed to generate JWT token".to_string()
-        }),
+        Err(_) => {
+            return Err(LoginError {
+                kind: "FailedTokenGeneration".to_string(),
+                message: "Failed to generate JWT token".to_string(),
+            })
+        }
     };
 
     Ok(token)
 }
 
-async fn find_user(user_collection: Arc<Collection<User>>, identifier: &str) -> Result<User, LoginError>{
+async fn find_user(
+    user_collection: Arc<Collection<User>>,
+    identifier: &str,
+) -> Result<User, LoginError> {
     let filter = doc! {
         "$or": [
             { "username": identifier },
@@ -73,40 +82,40 @@ async fn find_user(user_collection: Arc<Collection<User>>, identifier: &str) -> 
                 Ok(user)
             } else {
                 Err(LoginError {
-                        kind: "UserNotFound".to_string(),
-                        message: "Could not find user based on given identifier".to_string()
+                    kind: "UserNotFound".to_string(),
+                    message: "Could not find user based on given identifier".to_string(),
                 })
             }
-        },
+        }
         Err(_) => Err(LoginError {
             kind: "UserNotFound".to_string(),
-            message: "Could not find user based on given identifier".to_string()
-        })
-,
+            message: "Could not find user based on given identifier".to_string(),
+        }),
     }
 }
 
 fn authenticate_user(password: &str, hash: &str) -> Result<bool, LoginError> {
     match verify(password, hash) {
         Ok(v) => Ok(v),
-        Err(err) => Err(LoginError{
+        Err(err) => Err(LoginError {
             kind: "LoginAttemptFailed".to_string(),
-            message: "Internal login attempt failure".to_string()
+            message: "Internal login attempt failure".to_string(),
         }),
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
-    sub: String,  // The subject of the token (typically the user ID)
-    exp: usize,   // Expiration time (as seconds since the epoch)
+    sub: String, // The subject of the token (typically the user ID)
+    exp: usize,  // Expiration time (as seconds since the epoch)
 }
 
 fn generate_jwt(user_id: &str) -> Result<String, jsonwebtoken::errors::Error> {
     let expiration = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards")
-        .as_secs() as usize + 3600;  // Token expiration time (e.g., 1 hour from now)
+        .as_secs() as usize
+        + 3600; // Token expiration time (e.g., 1 hour from now)
 
     let claims = Claims {
         sub: user_id.to_owned(),
@@ -114,7 +123,11 @@ fn generate_jwt(user_id: &str) -> Result<String, jsonwebtoken::errors::Error> {
     };
 
     let private_key = env::var("JWT_PRIVATE_KEY").expect("JWT_PRIVATE_KEY env variable not found");
-    let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(private_key.as_ref()))?;
+    let token = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(private_key.as_ref()),
+    )?;
     Ok(token)
 }
 
@@ -132,6 +145,6 @@ pub fn verify_jwt(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
         &DecodingKey::from_secret(public_key.as_ref()),
         &validation,
     )?;
-    
+
     Ok(token_data.claims)
 }
