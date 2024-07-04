@@ -1,8 +1,8 @@
 use rand::random;
-use reqwest::{Client, Response};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use base64::{Engine as _, engine::{self, general_purpose}, alphabet};
-use mongodb::{bson::{self, doc, oid::ObjectId, ser::{self, to_bson, Error}, Document}, Collection};
+use base64::{Engine as _, engine::general_purpose};
+use mongodb::{bson::{self, doc, oid::ObjectId}, Collection};
 use tokio::task;
 
 use std::fmt::{ Formatter, Display, Debug};
@@ -55,27 +55,13 @@ struct SpotifyRequestToken<'a> {
     redirect_uri: &'a str,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SpotifyToken {
     pub access_token: String,
     pub token_type: String,
     pub scope: String,
     pub expires_in: i32,
     pub refresh_token: String,
-}
-
-impl SpotifyToken {
-    pub fn to_bson(&self) -> Result<Document, SpotifyLoginError> {
-        let serialized = to_bson(&self);
-        if let Ok(bson::Bson::Document(document)) = serialized {
-            Ok(document)
-        } else {
-            Err(SpotifyLoginError{
-                kind: "SerializationFailure".to_string(),
-                message: "Failed to serialize struct spotifytoken into bson".to_string()
-            })
-        }
-    }
 }
 
 /*
@@ -87,8 +73,8 @@ expires_in	    int	    The time period (in seconds) for which the access token i
 refresh_token	string	See refreshing tokens.
 */
 
-pub async fn spotify_auth(user_collection: Arc<Collection<User>>, user_id: &ObjectId) -> Result<SpotifyToken, SpotifyLoginError> {
-    let user: User = match find_authenticated_user(user_collection.clone(), user_id).await {
+pub async fn spotify_auth(user_collection: Arc<Collection<User>>, user_id: ObjectId) -> Result<SpotifyToken, SpotifyLoginError> {
+    let user: User = match find_authenticated_user(user_collection.clone(), &user_id).await {
         Some(u) => u,
         None => return Err(SpotifyLoginError {
             kind: "UserNotFound".to_string(),
@@ -104,7 +90,7 @@ pub async fn spotify_auth(user_collection: Arc<Collection<User>>, user_id: &Obje
         Ok(t) => t,
         Err(e) => return Err(e)
     };
-    match add_spotify_token(user_collection.clone(), user_id, &token).await {
+    match add_spotify_token(user_collection.clone(), user_id, token.clone()).await {
         Ok(_) => {},
         Err(e) => return Err(e)
     }
@@ -132,7 +118,7 @@ async fn spotify_login(user: &User) -> Result<SpotifyToken, SpotifyLoginError> {
     }
 }
 
-async fn add_spotify_token(user_collection: Arc<Collection<User>>, user_id: &ObjectId, token: &SpotifyToken) -> Result<mongodb::results::UpdateResult, SpotifyLoginError> {
+async fn add_spotify_token(user_collection: Arc<Collection<User>>, user_id: ObjectId, token: SpotifyToken) -> Result<mongodb::results::UpdateResult, SpotifyLoginError> {
     let filter = doc! { "_id": user_id.to_string() };
 
     let bson_token: bson::Bson = match bson::to_bson(&token) {
@@ -147,7 +133,7 @@ async fn add_spotify_token(user_collection: Arc<Collection<User>>, user_id: &Obj
 
     match user_collection.update_one(filter, update).await {
         Ok(u) => {
-            start_token_refresh_task(user_collection.clone(), &user_id, &token);
+            start_token_refresh_task(user_collection.clone(), user_id, token);
             Ok(u)
         },
         Err(_) => Err(SpotifyLoginError{
@@ -157,19 +143,19 @@ async fn add_spotify_token(user_collection: Arc<Collection<User>>, user_id: &Obj
     }
 }
 
-fn start_token_refresh_task(user_collection: Arc<Collection<User>>, user_id: &ObjectId, token: &SpotifyToken) {
+fn start_token_refresh_task(user_collection: Arc<Collection<User>>, user_id: ObjectId, token: SpotifyToken) {
     // Calculate the sleep duration, subtracting a buffer (e.g., 60 seconds)
     let refresh_duration = Duration::from_secs((token.expires_in - 60) as u64);
 
     task::spawn(async move {
         tokio::time::sleep(refresh_duration).await;
-        if let Err(e) = refresh_token(user_collection.clone(), &user_id, &token).await {
+        if let Err(e) = refresh_token(user_collection.clone(), user_id, token).await {
             eprintln!("Failed to refresh token: {}", e);
         }
     });
 }
 
-async fn refresh_token(user_collection: Arc<Collection<User>>, user_id: &ObjectId, token: &SpotifyToken) -> Result<(), reqwest::Error> {
+async fn refresh_token(user_collection: Arc<Collection<User>>, user_id: ObjectId, token: SpotifyToken) -> Result<(), reqwest::Error> {
     let spotify_client_id = env::var("SPOTIFY_CLIENT_ID").expect("You must set the SPOTIFY_CLIENT_ID env var!");
 
     let client = Client::new();
@@ -188,7 +174,10 @@ async fn refresh_token(user_collection: Arc<Collection<User>>, user_id: &ObjectI
 
     if response.status().is_success() {
         let new_token: SpotifyToken = response.json().await?;
-        add_spotify_token(user_collection.clone(), &user_id, &new_token).await;
+        match add_spotify_token(user_collection.clone(), user_id, new_token).await {
+            Ok(_) => {},
+            Err(_) => eprintln!("Failed to added refreshed token")
+        };
     } else {
         eprintln!("Failed to refresh token: {}", response.status());
     }

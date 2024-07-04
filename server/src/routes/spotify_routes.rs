@@ -1,16 +1,15 @@
 use axum::{
-    extract::{State, Json}
-    routing::{get, post},
+    extract::{State, Json},
+    routing::post,
     Router,
     http::status,
     response::{Response, IntoResponse},
     body::Body
 };
-use mongodb::{Collection, bson::oid::ObjectId};
+use mongodb::bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
 
 use crate::AppState;
-use crate::Song;
 use crate::spotify;
 
 #[derive(Deserialize, Serialize)]
@@ -36,7 +35,7 @@ async fn post_spotify_login(State(appstate): State<AppState>, Json(payload): Jso
             .unwrap()
         },
     };
-    let token = match spotify::auth::spotify_auth(appstate.user_collection.clone(), &user_id).await {
+    let token = match spotify::auth::spotify_auth(appstate.user_collection.clone(), user_id).await {
         Ok(t) => t,
         Err(err) => {
         return Response::builder()
