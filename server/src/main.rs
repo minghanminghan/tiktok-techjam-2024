@@ -27,6 +27,7 @@ mod auth {
 
 mod spotify {
     pub mod auth;
+    pub mod player;
 }
 
 use routes::routes::get_routes;

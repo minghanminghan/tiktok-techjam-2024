@@ -1868,7 +1868,6 @@ dependencies = [
  "axum",
  "base64 0.22.1",
  "bcrypt",
- "hmac",
  "jsonwebtoken",
  "mongodb",
  "rand",
@@ -1876,7 +1875,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "sha2",
  "tokio",
 ]
 
