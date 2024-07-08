@@ -10,8 +10,6 @@ services:
             - ./reverseproxy/ssl:/etc/nginx/ssl
             - ./reverseproxy/html:/usr/share/nginx/html
             - ./reverseproxy/logs:/var/log/nginx
-        networks: 
-            - techjam-network
         depends_on:
             - server
     server:
@@ -23,6 +21,3 @@ services:
             - "8080:8080"
         env_file:
             - server.env
-networks:
-    techjam-network:
-        name: techjam-network

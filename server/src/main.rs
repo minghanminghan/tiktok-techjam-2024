@@ -5,6 +5,7 @@ use axum::{
 use std::error::Error;
 use std::env;
 use std::sync::Arc;
+use dotenv::dotenv;
 
 use tokio_postgres::NoTls;
 
@@ -36,6 +37,7 @@ use schemas::song::Song;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    dotenv().ok();
 
     let database_url = env::var("DATABASE_URL").expect("Must set DATABASE_URL!");
 
