@@ -17,6 +17,8 @@ services:
         build: ./server
         ports:
             - "8080:8080"
+        args:
+            - SERVER_ENV=${SERVER_ENV}
         env_file:
             - server.env
         depends_on:
