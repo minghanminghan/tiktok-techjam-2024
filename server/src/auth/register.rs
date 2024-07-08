@@ -1,6 +1,9 @@
 use bcrypt::{hash_with_result, BcryptError};
-use mongodb::{bson::{doc, oid}, Collection};
+use sqlx::{PgPool, query};
+
 use crate::User;
+use crate::schemas::user::NewUser;
+
 use std::fmt::{Display, Debug, Formatter};
 use std::fmt;
 use std::str::FromStr;
@@ -27,8 +30,8 @@ impl Debug for RegistrationError {
     }
 }
 
-pub async fn register(user_collection: Arc<Collection<User>>, username: &str, email: &str, password: &str) -> Result<User, RegistrationError> {
-    if !is_avaliable(user_collection.clone(), username, email).await {
+pub async fn register(pool: &PgPool, username: &str, email: &str, password: &str) -> Result<User, RegistrationError> {
+    if !is_avaliable(pool, username, email).await {
         return Err(RegistrationError{
             kind: "UsernameEmailInUse".to_string(),
             message: "The provided username or email is already in use".to_string()
@@ -45,23 +48,36 @@ pub async fn register(user_collection: Arc<Collection<User>>, username: &str, em
         })
     };
 
-    let new_user = User {
-        _id: oid::ObjectId::from_str("id_str").unwrap(),
+    let new_user: NewUser = NewUser {
         username: username.to_string(),
-        password: hash,
-        salt: salt,
-        spotifytoken: None,
         email: email.to_string(),
-        liked: Vec::new(),
-        disliked: Vec::new(),
+        password: hash,
+        salt: salt
     };
 
-    match user_collection.insert_one(&new_user).await {
-        Ok(_) => Ok(new_user),
-        Err(_) => Err(RegistrationError{
-            kind: "UserInsertionError".to_string(),
-            message: "Failed to insert user into MongoDB".to_string(),
-        }),
+    create_user(pool, new_user).await
+}
+
+pub async fn create_user(pool: &PgPool, new_user: NewUser) -> Result<User, RegistrationError> {
+    match sqlx::query_as!(
+        User,
+        r#"
+        INSERT INTO users (username, password, salt, email)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, username, password, salt, email, spotifytoken, liked_songs, disliked_songs
+        "#,
+        new_user.username,
+        new_user.password,
+        new_user.salt,
+        new_user.email,
+    )
+    .fetch_one(pool)
+    .await {
+        Ok(u) => Ok(u),
+        Err(_) => Err(RegistrationError {
+            kind: "CreateUserFailed".to_string(),
+            message: "Failed to add user to database".to_string()
+        })
     }
 }
 
@@ -75,17 +91,21 @@ fn generate_hash(password: &str) -> Result<(String, String), BcryptError> {
     }
 }
 
-async fn is_avaliable(user_collection: Arc<Collection<User>>, username: &str, email: &str) -> bool {
-    let filter = doc! {
-        "$or": [
-            { "username": username },
-            { "email": email }
-        ]
-    };
-
-    let result = user_collection.find_one(filter).await;
-    match result {
-        Ok(user) => user.is_some(),
-        Err(_err) => false,
+async fn is_avaliable(pool: &PgPool, username: &str, email: &str) -> bool {
+    match sqlx::query!(
+        r#"
+        SELECT EXISTS (
+            SELECT 1
+            FROM users
+            WHERE username = $1 OR email = $2
+        ) AS "exists!"
+        "#,
+        username,
+        email,
+    )
+    .fetch_one(pool)
+    .await {
+        Ok(v) => v,
+        Err(_) => false
     }
 }

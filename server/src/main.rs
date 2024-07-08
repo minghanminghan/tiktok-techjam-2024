@@ -1,12 +1,11 @@
-use axum::Router;
-use mongodb::{
-    Client,
-    options::ClientOptions,
-    Collection
+use axum::{
+    Router,
+    extract::Extension
 };
 use std::error::Error;
 use std::env;
 use std::sync::Arc;
+use sqlx::postgres::PgPoolOptions;
 
 mod routes { 
     pub mod routes;
@@ -34,28 +33,18 @@ use routes::routes::get_routes;
 use schemas::user::User;
 use schemas::song::Song;
 
-#[derive(Clone)]
-pub struct AppState {
-    user_collection: Arc<Collection<User>>,
-    song_collection: Arc<Collection<Song>>
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
 
-    let client_uri = env::var("MONGODB_URI").expect("You must set the MONGODB_URI environment var!");
-    let options = ClientOptions::parse(&client_uri).await?;
-    let client = Client::with_options(options)?;
-    let db = client.database("techjam");
+    let postgres_uri = env::var("POSTGRES_URI").expect("Must set POSTGRES_URI!");
 
-    let user_collection: mongodb::Collection<User> = db.collection("users");
-    let song_collection: mongodb::Collection<Song> = db.collection("songs");
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&postgres_uri)
+        .await?;
 
-    let appstate: AppState = AppState {
-        user_collection: Arc::new(user_collection),
-        song_collection: Arc::new(song_collection)
-    };
-    let app = Router::new().merge(get_routes(appstate));
+    let app = Router::new().merge(get_routes()).layer(Extension(pool));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     axum::serve(listener, app).await.unwrap();

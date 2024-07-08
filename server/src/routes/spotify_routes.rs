@@ -1,15 +1,14 @@
 use axum::{
-    extract::{State, Json},
+    extract::{Extension, Json},
     routing::post,
     Router,
     http::status,
     response::{Response, IntoResponse},
     body::Body
 };
-use mongodb::bson::oid::ObjectId;
+use sqlx::PgPool;
 use serde::{Serialize, Deserialize};
 
-use crate::AppState;
 use crate::spotify;
 
 #[derive(Deserialize, Serialize)]
@@ -17,15 +16,14 @@ struct SpotifyInput {
     user_id: String
 }
 
-pub fn spotify_routes(appstate: AppState) -> Router {
+pub fn spotify_routes() -> Router {
     Router::new()
         .route("/api/v1/spotify/login",post(post_spotify_login))
-        .with_state(appstate)
 }
 
-async fn post_spotify_login(State(appstate): State<AppState>, Json(payload): Json<SpotifyInput>) -> Response {
+async fn post_spotify_login(Extension(pool): Extension<PgPool>, Json(payload): Json<SpotifyInput>) -> Response {
 
-    let user_id = match ObjectId::parse_str(&payload.user_id) {
+    let user_id: i32 = match payload.user_id.parse() {
         Ok(u) => u,
         Err(_) => {
         return Response::builder()
@@ -35,7 +33,7 @@ async fn post_spotify_login(State(appstate): State<AppState>, Json(payload): Jso
             .unwrap()
         },
     };
-    let token = match spotify::auth::spotify_auth(appstate.user_collection.clone(), user_id).await {
+    let token = match spotify::auth::spotify_auth(&pool, user_id).await {
         Ok(t) => t,
         Err(err) => {
         return Response::builder()

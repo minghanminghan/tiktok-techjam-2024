@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Json, State},
+    extract::{Json, Extension},
     routing::post,
     Router,
     response::Response,
@@ -9,9 +9,9 @@ use axum::{
 };
 use serde_json::json;
 use serde::Deserialize;
+use sqlx::PgPool;
 
 use crate::User;
-use crate::AppState;
 use crate::auth::login;
 use crate::auth::register;
 
@@ -28,15 +28,14 @@ struct RegistrationInput {
     password: String
 }
 
-pub fn user_routes(appstate: AppState) -> Router {
+pub fn user_routes() -> Router {
     Router::new()
         .route("/api/v1/login",post(post_login))
         .route("/api/v1/register",post(post_register))
-        .with_state(appstate)
 }
 
-async fn post_login(State(appstate): State<AppState>, Json(payload): Json<LoginInput>) -> Response {
-    match login::login(appstate.user_collection.clone(), &payload.identifier, &payload.password).await {
+async fn post_login(Extension(pool): Extension<PgPool>, Json(payload): Json<LoginInput>) -> Response {
+    match login::login(&pool, &payload.identifier, &payload.password).await {
         Ok(token) => {
             let response_body: serde_json::Value = json!({
                 "token": token
@@ -58,8 +57,8 @@ async fn post_login(State(appstate): State<AppState>, Json(payload): Json<LoginI
     }
 }
 
-async fn post_register(State(appstate): State<AppState>, Json(payload): Json<RegistrationInput>) -> Response {
-    let user: User = match register::register(appstate.user_collection.clone(), &payload.username, &payload.email, &payload.password).await {
+async fn post_register(Extension(pool): Extension<PgPool>, Json(payload): Json<RegistrationInput>) -> Response {
+    let user: User = match register::register(&pool, &payload.username, &payload.email, &payload.password).await {
         Ok(u) => u,
         Err(err) => {
             return Response::builder()
@@ -70,7 +69,7 @@ async fn post_register(State(appstate): State<AppState>, Json(payload): Json<Reg
         },
     };
 
-    match login::login(appstate.user_collection.clone(), &user.username, &user.password).await {
+    match login::login(&pool, &user.username, &user.password).await {
         Ok(token) => {
             let response_body: serde_json::Value = json!({
                 "token": token

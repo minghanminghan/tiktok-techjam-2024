@@ -1,7 +1,7 @@
 use bcrypt::verify;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
-use mongodb::{bson::doc, Collection};
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use std::env;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
@@ -30,11 +30,11 @@ impl Debug for LoginError {
 }
 
 pub async fn login(
-    user_collection: Arc<Collection<User>>,
+    pool: &PgPool,
     identifier: &str,
     password: &str,
 ) -> Result<String, LoginError> {
-    let user: User = match find_user(user_collection.clone(), identifier).await {
+    let user: User = match find_user(pool, identifier).await {
         Ok(u) => u,
         Err(err) => return Err(err),
     };
@@ -51,7 +51,7 @@ pub async fn login(
         });
     }
 
-    let token: String = match generate_jwt(&user._id.to_string()) {
+    let token: String = match generate_jwt(&user.id.to_string()) {
         Ok(t) => t,
         Err(_) => {
             return Err(LoginError {
@@ -64,33 +64,21 @@ pub async fn login(
     Ok(token)
 }
 
-async fn find_user(
-    user_collection: Arc<Collection<User>>,
-    identifier: &str,
-) -> Result<User, LoginError> {
-    let filter = doc! {
-        "$or": [
-            { "username": identifier },
-            { "email": identifier }
-        ]
-    };
-
-    let result = user_collection.find_one(filter).await;
-    match result {
-        Ok(user) => {
-            if let Some(user) = user {
-                Ok(user)
-            } else {
-                Err(LoginError {
+async fn find_user(pool: &PgPool, identifier: &str,) -> Result<User, LoginError> {
+    match sqlx::query_as!(
+        User,
+        r#"
+        SELECT id, username, password, salt, email, spotifytoken, liked_songs, disliked_songs
+        FROM users
+        WHERE username = $1 OR email = $1
+        "#,
+        identifier
+    ).fetch_optional(pool).await {
+        Ok(u) => Ok(u),
+        Err(e) => Err(LoginError {
                     kind: "UserNotFound".to_string(),
                     message: "Could not find user based on given identifier".to_string(),
-                })
-            }
-        }
-        Err(_) => Err(LoginError {
-            kind: "UserNotFound".to_string(),
-            message: "Could not find user based on given identifier".to_string(),
-        }),
+        })
     }
 }
 

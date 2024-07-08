@@ -26,13 +26,14 @@ services:
         image: techjam-database-image
         build: ./database
         ports:
-            - "27017:27017"
+            - "5432:5432"
         volumes:
-            - ./database/data:/data/db
+            - ./database/data:/var/lib/postgresql/data
+            - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
         env_file:
             - database.env
         healthcheck:
-            test: ["CMD-SHELL", "mongo --eval 'db.adminCommand('ping')'"]
+            test: ["CMD-SHELL","pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
             interval: 30s
             timeout: 10s
             retries: 5

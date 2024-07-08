@@ -2,8 +2,8 @@ use rand::random;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use base64::{Engine as _, engine::general_purpose};
-use mongodb::{bson::{self, doc, oid::ObjectId}, Collection};
 use tokio::task;
+use sqlx::PgPool;
 
 use std::fmt::{ Formatter, Display, Debug};
 use std::fmt;
@@ -73,7 +73,7 @@ expires_in	    int	    The time period (in seconds) for which the access token i
 refresh_token	string	See refreshing tokens.
 */
 
-pub async fn spotify_auth(user_collection: Arc<Collection<User>>, user_id: ObjectId) -> Result<SpotifyToken, SpotifyLoginError> {
+pub async fn spotify_auth(pool: &PgPool, user_id: ObjectId) -> Result<SpotifyToken, SpotifyLoginError> {
     let user: User = match find_authenticated_user(user_collection.clone(), &user_id).await {
         Some(u) => u,
         None => return Err(SpotifyLoginError {
@@ -97,17 +97,22 @@ pub async fn spotify_auth(user_collection: Arc<Collection<User>>, user_id: Objec
     Ok(token)
 }
 
-async fn find_authenticated_user(user_collection: Arc<Collection<User>>, user_id: &ObjectId) -> Option<User> {
-    let filter = doc! {
-        "$or": [
-            { "_id": user_id },
-        ]
-    };
-
-    let result = user_collection.find_one(filter).await;
-    match result {
-        Ok(user) => user,
-        Err(_err) => None,
+async fn find_authenticated_user(pool: &PgPool, user_id: &ObjectId) -> Option<User> {
+    match sqlx::query!(
+        r#"
+        SELECT EXISTS (
+            SELECT 1
+            FROM users
+            WHERE username = $1 OR email = $2
+        ) AS "exists!"
+        "#,
+        username,
+        email,
+    )
+    .fetch_one(pool)
+    .await {
+        Ok(u) => Ok(u),
+        Err(e) => None
     }
 }
 

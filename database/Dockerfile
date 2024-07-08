@@ -1,3 +1,3 @@
-FROM mongo:8.0.0-rc9-jammy
+FROM postgres:latest
 
-EXPOSE 27017
+EXPOSE 5432
