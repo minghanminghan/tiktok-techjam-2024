@@ -23,28 +23,6 @@ services:
             - "8080:8080"
         env_file:
             - server.env
-        depends_on:
-            database:
-                condition: service_healthy
-    database:
-        image: techjam-database-image
-        networks:
-            - techjam-network
-        hostname: postgres
-        build: ./database
-        restart: always
-        ports:
-            - "5432:5432"
-        volumes:
-            - ./database/data:/var/lib/postgresql/data
-            - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
-        env_file:
-            - database.env
-        healthcheck:
-            test: ["CMD-SHELL","pg_isready -U root -d techjam"]
-            interval: 30s
-            timeout: 10s
-            retries: 5
 networks:
     techjam-network:
         name: techjam-network
