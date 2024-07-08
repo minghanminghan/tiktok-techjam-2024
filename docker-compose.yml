@@ -10,12 +10,14 @@ services:
             - ./reverseproxy/ssl:/etc/nginx/ssl
             - ./reverseproxy/html:/usr/share/nginx/html
             - ./reverseproxy/logs:/var/log/nginx
-        networks: techjam-network
+        networks: 
+            - techjam-network
         depends_on:
             - server
     server:
         image: techjam-server-image
-        networks: techjam-network
+        networks:
+            - techjam-network
         build: ./server
         ports:
             - "8080:8080"
@@ -26,7 +28,8 @@ services:
                 condition: service_healthy
     database:
         image: techjam-database-image
-        networks: techjam-network
+        networks:
+            - techjam-network
         hostname: postgres
         build: ./database
         restart: always
