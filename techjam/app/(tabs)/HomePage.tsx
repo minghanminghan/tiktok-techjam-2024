@@ -22,6 +22,31 @@ export default function HomePage() {
     );
 };
 
+const fetch_python = () => {
+  fetch('http://your-python-server-hostname-or-ip/run-python-script', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+        'like_list': [
+          "7Far7FhCkXCQTsovPTzrmH",
+          "6lYY2HktYKpV1pUamfRlU1",
+          "4b82tXj35SycILuILcgBQ6"
+        ]
+    }),
+  })
+  .then(response => response.json())
+  .then(data => {
+      console.log('Result from Python script:', data.result);
+      // Handle the result as needed
+  })
+  .catch(error => {
+      console.error('Error:', error);
+      // Handle errors
+  });
+}
+
 const styles = StyleSheet.create({
     root:{
       alignItems: "center",
