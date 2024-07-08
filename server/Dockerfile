@@ -1,7 +1,6 @@
 FROM rust:1.76
 
-ARG SERVER_ENV
-ENV SERVER_ENV $SERVER_ENV
+ENV SQLX_OFFLINE true
 COPY src src
 COPY Cargo.toml Cargo.toml
 
