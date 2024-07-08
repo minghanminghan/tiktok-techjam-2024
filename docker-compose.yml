@@ -33,7 +33,7 @@ services:
         env_file:
             - database.env
         healthcheck:
-            test: ["CMD-SHELL","pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+            test: ["CMD-SHELL","pg_isready -U root -d techjam"]
             interval: 30s
             timeout: 10s
             retries: 5
