@@ -2,11 +2,11 @@ import React, {useState, useEffect} from 'react';
 import { View, Text, StyleSheet, Image, useWindowDimensions } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
-import { playListData } from '@/assets/songs/playListData';
-
-//import TrackPlayer from 'react-native-track-player';
+import { playListData } from '@/assets/songs/playListData'; //change this to db
 
 import MusicCard from '@/components/MusicCard';
+import WebPlayback from '@/components/WebPlayback';
+import { SpotifyApi } from '@spotify/web-api-ts-sdk'; 
 
 import Animated, {
   useSharedValue,
@@ -67,8 +67,67 @@ export default function TabTwoScreen() {
       
     });
 
+/*
+    const spotifyConfig: ApiConfig = {
+        clientID: "577571ab029843d58e72fb448a256c58",
+        redirectURL: "SPOTIFY_REDIRECT_URL", //fill these urls out
+        tokenRefreshURL: "SPOTIFY_TOKEN_REFRESH_URL",
+        tokenSwapURL: "SPOTIFY_TOKEN_SWAP_URL",
+        scope: ApiScope.AppRemoteControlScope | ApiScope.UserFollowReadScope
+    }
+
+    async function playEpicSong() {
+      try {
+        //]const session = await SpotifyAuth.authorize(spotifyConfig);
+        //await SpotifyRemote.connect(session.accessToken);
+        //await SpotifyRemote.playUri("spotify:track:6IA8E2Q5ttcpbuahIejO74");
+        //await SpotifyRemote.seek(58000);
+      } catch (err) {
+        console.error("Couldn't authorize with or connect to Spotify", err);
+    }}
+*/
+
+
+async function callback(ctx) {
+  const CLIENT_ID = '577571ab029843d58e72fb448a256c58';
+  const CLIENT_SECRET = 'f1ddbccf106b4923a8c92334c1b08f99';
+  const code = ctx['code'] || null;
+  const authToken = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
+
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    mode: 'cors',
+    cache: 'no-cache',
+    headers: {
+      'Authorization': `Basic ${authToken}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: JSON.stringify({
+      code: code,
+      redirect_uri: '/explore',
+      grant_type: 'authorization_code'
+    })
+  });
+
+  if (response.status !== 200) {
+    console.log(`Bad response: ${response.statusText}`);
+    ctx.response.body = JSON.stringify({
+      'type': 'error',
+      'error': 'Error while authorizing Spotify'
+    });
+    ctx.response.type = 'application/json';
+    return;
+  }
+
+  const { access_token } = await response.json();
+
+  ctx.cookies.set('access_token', access_token);
+  ctx.response.redirect(`http://localhost:${PORT}/`);
+}
+
     useEffect(()=> {
       translateX.value = 0;
+      console.log(callback(null))
       setNextIndex(currentIndex+ 1);
     }, [currentIndex, translateX])
 
@@ -130,4 +189,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems:'center',
   }
-});
+})

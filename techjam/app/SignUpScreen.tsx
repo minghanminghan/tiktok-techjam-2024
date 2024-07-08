@@ -21,26 +21,29 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [SuccessMessage, setSuccessMessage] = useState('');
   
-  const onRegisterPressed = async () => {
-
-    setSuccessMessage(`button pressed`)
-    const response = await fetch('https://192.168.0.108:8081/api/v1/register', {
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username,
-            email,
-            password,
-          }),
-        })
-          .then(response => response.json())
-          .then(data => {
-            setSuccessMessage(`Registered successfully!`)
-            router.navigate('/(tabs)/HomePage')
-          })
-          .catch(error => {
-            setSuccessMessage(`Error: ${error}`);
-          });
+  const onRegisterPressed = async (username:string, email:string, password:string, confirmPassword:string) => {
+    console.log(`button pressed`)
+    if (password === confirmPassword){
+      const response = await fetch('https://https://harmonizeapp.net/api/v1/register', {
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          'username':username,
+          'email':password,
+          'password':password,
+        }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log(`Registered successfully!`)
+        console.log(data)
+        router.navigate('/')
+      })
+      .catch(error => {
+        console.log(`Error: ${error}`);
+      });
+      router.navigate('/') //temporary fix, remove when api's start working
+    }
   /*
   Eric's address: 18.218.123.255:8080
     */
