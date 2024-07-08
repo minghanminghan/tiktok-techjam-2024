@@ -14,8 +14,6 @@ services:
             - server
     server:
         image: techjam-server-image
-        networks:
-            - techjam-network
         build: ./server
         ports:
             - "8080:8080"
