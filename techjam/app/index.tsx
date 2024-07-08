@@ -15,15 +15,31 @@ import TrackPlayer from 'react-native-track-player';
 
 const hardUsername = "Username"
 const hardPassword = "Password"
+//const [SuccessMessage, setSuccessMessage] = useState('');
 
-const onSignInPressed = (username, password) => {
-  // temporary sign in 
-  if (username == hardUsername && password == hardPassword){
-    router.navigate('/(tabs)/HomePage');
-  }
-  else{
+const onSignInPressed = async (username:string, password:string) => {
+  console.log(`button pressed`)
+  const response = await fetch('https://https://harmonizeapp.net/api/v1/login', {
+    method: 'POST', 
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      'username':username,
+      'password':password,
+    }),
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log(`Successful Login`)
+    console.log(data)
+    router.navigate('/explore')
+  })
+  .catch(error => {
+    console.log(`Error: ${error}`);
     router.navigate("/SignInError");
-  }
+  });
+
+  // temporary sign in, remove when api's get fixed
+  router.navigate('/explore');
 }
 
 const onForgotPasswordPressed = () => {

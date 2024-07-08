@@ -6,7 +6,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import CustomButton from '../../components/CustomButton'
 
 const onSignOutPressed = () => {
-  router.back()
+  router.navigate('/')
 }
  
 export default function HomePage() {
@@ -22,6 +22,22 @@ export default function HomePage() {
     );
 };
 
+const styles = StyleSheet.create({
+    root:{
+      alignItems: "center",
+      padding: 20,
+      flex: 1,
+      backgroundColor: 'F9FBFC'
+    },
+    title:{
+      fontSize:24,
+      fontWeight:'bold',
+      color:'#051c60',
+      margin: 10,
+    },
+  });
+  
+/*
 const fetch_python = () => {
   fetch('http://your-python-server-hostname-or-ip/run-python-script', {
     method: 'POST',
@@ -46,18 +62,4 @@ const fetch_python = () => {
       // Handle errors
   });
 }
-
-const styles = StyleSheet.create({
-    root:{
-      alignItems: "center",
-      padding: 20,
-      flex: 1,
-      backgroundColor: 'F9FBFC'
-    },
-    title:{
-      fontSize:24,
-      fontWeight:'bold',
-      color:'#051c60',
-      margin: 10,
-    },
-  });
+*/
