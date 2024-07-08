@@ -1,7 +1,7 @@
 use bcrypt::verify;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use tokio_postgres::Client;
 use std::env;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
@@ -30,7 +30,7 @@ impl Debug for LoginError {
 }
 
 pub async fn login(
-    pool: &PgPool,
+    pool: &Client,
     identifier: &str,
     password: &str,
 ) -> Result<String, LoginError> {
@@ -63,24 +63,40 @@ pub async fn login(
 
     Ok(token)
 }
-
-async fn find_user(pool: &PgPool, identifier: &str,) -> Result<User, LoginError> {
-    match sqlx::query_as!(
-        User,
-        r#"
-        SELECT id, username, password, salt, email, spotifytoken, liked_songs, disliked_songs
+async fn find_user(client: &Client, identifier: &str) -> Result<User, LoginError> {
+    let stmt = match  client.prepare(
+        "SELECT id, username, password, salt, email, spotifytoken, liked_songs, disliked_songs
         FROM users
-        WHERE username = $1 OR email = $1
-        "#,
-        identifier
-    ).fetch_optional(pool).await {
-        Ok(u) => Ok(u),
-        Err(e) => Err(LoginError {
-                    kind: "UserNotFound".to_string(),
-                    message: "Could not find user based on given identifier".to_string(),
+        WHERE username = $1 OR email = $2"
+    ).await {
+        Ok(q) => q,
+        Err(_) => return Err(LoginError{
+            kind: "UserNotFound".to_string(),
+            message: "Could not find user based on given identifier".to_string(),
+        })
+    };
+
+    match client.query_one(&stmt, &[&identifier, &identifier]).await {
+        Ok(row) => {
+            Ok(User {
+            id: row.get("id"),
+            username: row.get("username"),
+            password: row.get("password"),
+            salt: row.get("salt"),
+            email: row.get("email"),
+            spotifytoken: row.get("spotifytoken"),
+            liked_songs: row.get("liked_songs"),
+            disliked_songs: row.get("disliked_songs"),
+            })
+        },
+        Err(_) => Err(LoginError{
+            kind: "UserNotFound".to_string(),
+            message: "Could not find user based on given identifier".to_string(),
         })
     }
+
 }
+
 
 fn authenticate_user(password: &str, hash: &str) -> Result<bool, LoginError> {
     match verify(password, hash) {

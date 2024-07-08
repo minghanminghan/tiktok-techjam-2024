@@ -1,13 +1,18 @@
 use rand::random;
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use base64::{Engine as _, engine::general_purpose};
 use tokio::task;
-use sqlx::PgPool;
+use bytes::BytesMut;
+use tokio_postgres::{
+    Client,
+    types::{FromSql, ToSql, IsNull, Type, to_sql_checked}
+};
 
+use std::error::Error;
 use std::fmt::{ Formatter, Display, Debug};
 use std::fmt;
 use std::env;
+use std::sync::Arc;
 use std::time::Duration;
 
 use crate::User;
@@ -63,6 +68,46 @@ pub struct SpotifyToken {
     pub refresh_token: String,
 }
 
+impl<'a> FromSql<'a> for SpotifyToken {
+    fn from_sql(_: &Type, raw: &[u8]) -> Result<SpotifyToken, Box<(dyn Error + Send + Sync + 'static)>> {
+        let json_str = std::str::from_utf8(raw)?;
+        let token = serde_json::from_str(json_str)?;
+        Ok(token)
+    }
+
+    fn accepts(ty: &Type) -> bool {
+        *ty == Type::JSONB
+    }
+
+    fn from_sql_null(ty: &Type) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
+        Err(Box::new(tokio_postgres::types::WasNull))
+    }
+
+    fn from_sql_nullable(
+        ty: &Type,
+        raw: Option<&'a [u8]>,
+    ) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
+        match raw {
+            Some(raw) => Self::from_sql(ty, raw),
+            None => Self::from_sql_null(ty),
+        }
+    }
+}
+
+impl ToSql for SpotifyToken {
+    fn to_sql(&self, _: &Type, out: &mut BytesMut) -> Result<IsNull, Box<(dyn Error + Send + Sync + 'static)>> {
+        let json_str = serde_json::to_string(self)?;
+        out.extend_from_slice(json_str.as_bytes());
+        Ok(IsNull::No)
+    }
+
+    fn accepts(ty: &Type) -> bool {
+        *ty == Type::JSONB
+    }
+
+    to_sql_checked!();
+}
+
 /*
 key	            Type	Description
 access_token	string	An access token that can be provided in subsequent calls, for example to Spotify Web API services.
@@ -72,8 +117,8 @@ expires_in	    int	    The time period (in seconds) for which the access token i
 refresh_token	string	See refreshing tokens.
 */
 
-pub async fn spotify_auth(pool: &PgPool, user_id: i32) -> Result<SpotifyToken, SpotifyLoginError> {
-    let user: User = match find_authenticated_user(pool, &user_id).await {
+pub async fn spotify_auth(client: Arc<Client>, user_id: i32) -> Result<SpotifyToken, SpotifyLoginError> {
+    let user: User = match find_authenticated_user(&client, &user_id).await {
         Some(u) => u,
         None => return Err(SpotifyLoginError {
             kind: "UserNotFound".to_string(),
@@ -89,29 +134,37 @@ pub async fn spotify_auth(pool: &PgPool, user_id: i32) -> Result<SpotifyToken, S
         Ok(t) => t,
         Err(e) => return Err(e)
     };
-    match add_spotify_token(pool, user_id, token.clone()).await {
+    match add_spotify_token(&client, user_id, token.clone()).await {
         Ok(_) => {},
         Err(e) => return Err(e)
     }
     Ok(token)
 }
 
-async fn find_authenticated_user(pool: &PgPool, user_id: &i32) -> Option<User> {
-    match sqlx::query!(
-        r#"
-        SELECT EXISTS (
-            SELECT 1
-            FROM users
-            WHERE username = $1 OR email = $2
-        ) AS "exists!"
-        "#,
-        username,
-        email,
-    )
-    .fetch_one(pool)
-    .await {
-        Ok(u) => Some(u),
-        Err(e) => None
+async fn find_authenticated_user(client: &Client, user_id: &i32) -> Option<User> {
+    let stmt = match  client.prepare(
+        "SELECT id, username, password, salt, email, spotifytoken, liked_songs, disliked_songs
+        FROM users
+        WHERE id = $1"
+    ).await {
+        Ok(q) => q,
+        Err(_) => return None
+    };
+
+    match client.query_one(&stmt, &[&user_id]).await {
+        Ok(row) => {
+            Some(User {
+            id: row.get("id"),
+            username: row.get("username"),
+            password: row.get("password"),
+            salt: row.get("salt"),
+            email: row.get("email"),
+            spotifytoken: row.get("spotifytoken"),
+            liked_songs: row.get("liked_songs"),
+            disliked_songs: row.get("disliked_songs"),
+            })
+        },
+        Err(_) => None
     }
 }
 
@@ -122,50 +175,51 @@ async fn spotify_login(user: &User) -> Result<SpotifyToken, SpotifyLoginError> {
     }
 }
 
-async fn add_spotify_token(pool: &PgPool, user_id: i32, token: SpotifyToken) -> Result<(), SpotifyLoginError> {
-    match sqlx::query!(
-        r#"
-        UPDATE users
+async fn add_spotify_token(client: &Client, user_id: i32, token: SpotifyToken) -> Result<(), SpotifyLoginError> {
+    let stmt = match client.prepare(
+        "UPDATE users
         SET spotifytoken = $1
-        WHERE id = $2
-        "#,
-        serde_json::to_value(token)?,
-        user_id,
-    )
-    .execute(pool)
-    .await {
+        WHERE id = $2"
+    ).await {
+        Ok(q) => q,
+        Err(_) => return Err(SpotifyLoginError {
+            kind: "SpotifyTokenQueryFail".to_string(),
+            message: "Failed to create a spotify token query".to_string()
+        })
+    };
+
+    match client.execute(&stmt, &[&token, &user_id]).await {
         Ok(_) => Ok(()),
         Err(_) => Err(SpotifyLoginError {
             kind: "AddSpotifyTokenFailure".to_string(),
             message: "Failed to add spotify token to the database".to_string()
         })
     }
-
 }
 
-fn start_token_refresh_task(pool: &PgPool, user_id: i32, token: SpotifyToken) {
+fn start_token_refresh_task(client: Client, user_id: i32, token: SpotifyToken) {
     // Calculate the sleep duration, subtracting a buffer (e.g., 60 seconds)
     let refresh_duration = Duration::from_secs((token.expires_in - 60) as u64);
 
     task::spawn(async move {
         tokio::time::sleep(refresh_duration).await;
-        if let Err(e) = refresh_token(pool, user_id, token).await {
+        if let Err(e) = refresh_token(client, user_id, token).await {
             eprintln!("Failed to refresh token: {}", e);
         }
     });
 }
 
-async fn refresh_token(pool: &PgPool, user_id: i32, token: SpotifyToken) -> Result<(), reqwest::Error> {
+async fn refresh_token(client: Client, user_id: i32, token: SpotifyToken) -> Result<(), reqwest::Error> {
     let spotify_client_id = env::var("SPOTIFY_CLIENT_ID").expect("You must set the SPOTIFY_CLIENT_ID env var!");
 
-    let client = Client::new();
+    let request_client = reqwest::Client::new();
     let params = [
         ("grant_type", "refresh_token"),
         ("refresh_token", &token.refresh_token),
         ("client_id", &spotify_client_id)
     ];
 
-    let response = client
+    let response = request_client
         .post("https://accounts.spotify.com/api/token")
         .header("Content-Type", "application/x-www-form-urlencoded")
         .form(&params)
@@ -174,7 +228,7 @@ async fn refresh_token(pool: &PgPool, user_id: i32, token: SpotifyToken) -> Resu
 
     if response.status().is_success() {
         let new_token: SpotifyToken = response.json().await?;
-        match add_spotify_token(pool, user_id, new_token).await {
+        match add_spotify_token(&client, user_id, new_token).await {
             Ok(_) => {},
             Err(_) => eprintln!("Failed to added refreshed token")
         };
@@ -205,8 +259,8 @@ async fn spotify_code() -> Result<SpotifyCode, reqwest::Error> {
         state: &state,
     };
 
-    let client = Client::new();
-    let response = client
+    let request_client = reqwest::Client::new();
+    let response = request_client
         .get("https://accounts.spotify.com/authorize")
         .query(&auth_query_parameters)
         .send()
@@ -246,8 +300,8 @@ async fn spotify_token() -> Result<SpotifyToken, SpotifyLoginError> {
         redirect_uri: "https://localhost:8081/api/v1/",
     };
     let auth_header_value = auth_header();
-    let client = Client::new();
-    let response = client
+    let request_client = reqwest::Client::new();
+    let response = request_client
         .post("https://accounts.spotify.com/api/token")
         .header("Authorization", auth_header_value)
         .header("Content-Type", "application/x-www-form-urlencoded")

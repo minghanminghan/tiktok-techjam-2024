@@ -5,11 +5,11 @@ use axum::{
     response::Response,
     http::StatusCode,
     body::Body
-
 };
 use serde_json::json;
 use serde::Deserialize;
-use sqlx::PgPool;
+use tokio_postgres::Client;
+use std::sync::Arc;
 
 use crate::User;
 use crate::auth::login;
@@ -34,8 +34,8 @@ pub fn user_routes() -> Router {
         .route("/api/v1/register",post(post_register))
 }
 
-async fn post_login(Extension(pool): Extension<PgPool>, Json(payload): Json<LoginInput>) -> Response {
-    match login::login(&pool, &payload.identifier, &payload.password).await {
+async fn post_login(Extension(client): Extension<Arc<Client>>, Json(payload): Json<LoginInput>) -> Response {
+    match login::login(&client, &payload.identifier, &payload.password).await {
         Ok(token) => {
             let response_body: serde_json::Value = json!({
                 "token": token
@@ -57,8 +57,8 @@ async fn post_login(Extension(pool): Extension<PgPool>, Json(payload): Json<Logi
     }
 }
 
-async fn post_register(Extension(pool): Extension<PgPool>, Json(payload): Json<RegistrationInput>) -> Response {
-    let user: User = match register::register(&pool, &payload.username, &payload.email, &payload.password).await {
+async fn post_register(Extension(client): Extension<Arc<Client>>, Json(payload): Json<RegistrationInput>) -> Response {
+    let user: User = match register::register(&client, &payload.username, &payload.email, &payload.password).await {
         Ok(u) => u,
         Err(err) => {
             return Response::builder()
@@ -69,7 +69,7 @@ async fn post_register(Extension(pool): Extension<PgPool>, Json(payload): Json<R
         },
     };
 
-    match login::login(&pool, &user.username, &user.password).await {
+    match login::login(&client, &user.username, &user.password).await {
         Ok(token) => {
             let response_body: serde_json::Value = json!({
                 "token": token

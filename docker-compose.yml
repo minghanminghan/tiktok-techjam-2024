@@ -25,6 +25,7 @@ services:
     database:
         image: techjam-database-image
         build: ./database
+        restart: always
         ports:
             - "5432:5432"
         volumes:

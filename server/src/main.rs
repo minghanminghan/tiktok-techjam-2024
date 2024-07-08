@@ -5,7 +5,8 @@ use axum::{
 use std::error::Error;
 use std::env;
 use std::sync::Arc;
-use sqlx::postgres::PgPoolOptions;
+
+use tokio_postgres::NoTls;
 
 mod routes { 
     pub mod routes;
@@ -33,18 +34,14 @@ use routes::routes::get_routes;
 use schemas::user::User;
 use schemas::song::Song;
 
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
 
-    let postgres_uri = env::var("POSTGRES_URI").expect("Must set POSTGRES_URI!");
+    let database_url = env::var("DATABASE_URL").expect("Must set DATABASE_URL!");
 
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&postgres_uri)
-        .await?;
+    let (client, connection) = tokio_postgres::connect(&database_url, NoTls).await.unwrap();
 
-    let app = Router::new().merge(get_routes()).layer(Extension(pool));
+    let app = Router::new().merge(get_routes()).layer(Extension(Arc::new(client)));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     axum::serve(listener, app).await.unwrap();

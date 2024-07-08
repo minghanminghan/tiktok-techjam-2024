@@ -6,7 +6,8 @@ use axum::{
     response::{Response, IntoResponse},
     body::Body
 };
-use sqlx::PgPool;
+use tokio_postgres::Client;
+use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 
 use crate::spotify;
@@ -21,7 +22,7 @@ pub fn spotify_routes() -> Router {
         .route("/api/v1/spotify/login",post(post_spotify_login))
 }
 
-async fn post_spotify_login(Extension(pool): Extension<PgPool>, Json(payload): Json<SpotifyInput>) -> Response {
+async fn post_spotify_login(Extension(client): Extension<Arc<Client>>, Json(payload): Json<SpotifyInput>) -> Response {
 
     let user_id: i32 = match payload.user_id.parse() {
         Ok(u) => u,
@@ -33,7 +34,7 @@ async fn post_spotify_login(Extension(pool): Extension<PgPool>, Json(payload): J
             .unwrap()
         },
     };
-    let token = match spotify::auth::spotify_auth(&pool, user_id).await {
+    let token = match spotify::auth::spotify_auth(client, user_id).await {
         Ok(t) => t,
         Err(err) => {
         return Response::builder()

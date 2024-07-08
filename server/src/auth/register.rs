@@ -1,5 +1,5 @@
 use bcrypt::{hash_with_result, BcryptError};
-use sqlx::{PgPool, query};
+use tokio_postgres::Client;
 
 use crate::User;
 use crate::schemas::user::NewUser;
@@ -30,8 +30,8 @@ impl Debug for RegistrationError {
     }
 }
 
-pub async fn register(pool: &PgPool, username: &str, email: &str, password: &str) -> Result<User, RegistrationError> {
-    if !is_avaliable(pool, username, email).await {
+pub async fn register(client: &Client, username: &str, email: &str, password: &str) -> Result<User, RegistrationError> {
+    if !is_avaliable(client, username, email).await {
         return Err(RegistrationError{
             kind: "UsernameEmailInUse".to_string(),
             message: "The provided username or email is already in use".to_string()
@@ -55,29 +55,29 @@ pub async fn register(pool: &PgPool, username: &str, email: &str, password: &str
         salt: salt
     };
 
-    create_user(pool, new_user).await
+    create_user(client, new_user).await
 }
 
-pub async fn create_user(pool: &PgPool, new_user: NewUser) -> Result<User, RegistrationError> {
-    match sqlx::query_as!(
-        User,
-        r#"
-        INSERT INTO users (username, password, salt, email)
+pub async fn create_user(client: &Client, new_user: NewUser) -> Result<User, RegistrationError> {
+    let stmt = match client.prepare(
+        "INSERT INTO users (username, password, salt, email)
         VALUES ($1, $2, $3, $4)
-        RETURNING id, username, password, salt, email, spotifytoken, liked_songs, disliked_songs
-        "#,
-        new_user.username,
-        new_user.password,
-        new_user.salt,
-        new_user.email,
-    )
-    .fetch_one(pool)
-    .await {
-        Ok(u) => Ok(u),
-        Err(_) => Err(RegistrationError {
-            kind: "CreateUserFailed".to_string(),
-            message: "Failed to add user to database".to_string()
+        RETURNING id"
+    ).await {
+        Ok(q) => q,
+        Err(_) => return Err(RegistrationError {
+            kind: "UserCreationFailed".to_string(),
+            message: "Failed to make the user into a SQL query".to_string()
         })
+    };
+
+    match client.query_one(&stmt, &[&new_user.username, &new_user.password, &new_user.salt, &new_user.email]).await {
+        Ok(row) => Ok(row.get("id")),
+        Err(_) => Err(RegistrationError {
+            kind: "UserIdFetchFailed".to_string(),
+            message: "Failed to fetch the user id".to_string()
+        })
+
     }
 }
 
@@ -91,21 +91,20 @@ fn generate_hash(password: &str) -> Result<(String, String), BcryptError> {
     }
 }
 
-async fn is_avaliable(pool: &PgPool, username: &str, email: &str) -> bool {
-    match sqlx::query!(
-        r#"
-        SELECT EXISTS (
+async fn is_avaliable(client: &Client, username: &str, email: &str) -> bool {
+    let stmt = match client.prepare(
+        "SELECT EXISTS (
             SELECT 1
             FROM users
             WHERE username = $1 OR email = $2
-        ) AS "exists!"
-        "#,
-        username,
-        email,
-    )
-    .fetch_one(pool)
-    .await {
-        Ok(v) => v,
+        )"
+    ).await {
+        Ok(q) => q,
+        Err(_) => return false
+    };
+
+    match client.query_one(&stmt, &[&username, &email]).await {
+        Ok(row) => row.get(0),
         Err(_) => false
     }
 }

@@ -2,7 +2,6 @@ use axum::{
     routing::get,
     Router
 };
-use sqlx::PgPool;
 
 use crate::routes::handle_get;
 use crate::routes::{spotify_routes::spotify_routes, user_routes::user_routes};
