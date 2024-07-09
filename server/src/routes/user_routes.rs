@@ -6,6 +6,7 @@ use axum::{
     http::StatusCode,
     body::Body
 };
+use axum_extra::extract::cookie::{Cookie, CookieJar};
 use serde_json::json;
 use serde::Deserialize;
 use tokio_postgres::Client;
@@ -71,14 +72,16 @@ async fn post_register(Extension(client): Extension<Arc<Client>>, Json(payload):
 
     match login::login(&client, &user.username, &user.password).await {
         Ok(token) => {
-            let response_body: serde_json::Value = json!({
-                "token": token
-            });
+            let token_cookie = Cookie::new("token",token);
 
+            let cookie = Cookie::build(token_cookie)
+                .path("/")
+                .http_only(true);
             Response::builder()
                 .status(StatusCode::OK)
                 .header("Content-Type", "application/json")
-                .body(Body::from(response_body.to_string()))
+                .header("Set-Cookie", cookie.to_string())
+                .body(Body::from("Login Successful".to_string()))
                 .unwrap()
         },
         Err(err) => {

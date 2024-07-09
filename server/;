@@ -1,0 +1,39 @@
+use std::path::Path;
+use pyo3::{
+    prelude::*,
+    types::{PyModule, PyList}
+};
+use crate::auth::login::find_user;
+use tokio_postgres::Client;
+
+pub fn fetch_songs(client: &Client, user_id: i32) {
+
+}
+
+fn call_python(liked_songs: Option<Vec<i32>>) -> Result<Vec<String>, PyErr>{
+    let path = Path::new("~/tiktok-techjam-2024/python");
+    let code: String = std::fs::read_to_string(path).unwrap();
+    Python::with_gil(|py| -> Result<Vec<String>, PyErr> {
+        let module = match PyModule::from_code_bound(py, &code, "", "") {
+            Ok(module) => module,
+            Err(err) => return Err(err),
+        };
+
+        let function = match module.getattr("") {
+            Ok(f) => f,
+            Err(err) => return Err(err)
+        };
+        if let Some(songs) = liked_songs {
+            let pylist = PyList::new_bound(py, songs);
+            match function.call1((pylist,)) {
+                Ok(result) => Ok(result.extract::<Vec<String>>()?),
+                Err(err) => Err(err),
+            }
+        } else {
+            match function.call0() {
+                Ok(result) => Ok(result.extract::<Vec<String>>()?),
+                Err(err) => Err(err),
+            }
+        }
+    })
+}

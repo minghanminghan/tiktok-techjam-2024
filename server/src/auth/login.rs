@@ -2,6 +2,7 @@ use bcrypt::verify;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use tokio_postgres::Client;
+use axum_extra::extract::cookie::{Cookie, CookieJar};
 use std::env;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
@@ -63,6 +64,7 @@ pub async fn login(
 
     Ok(token)
 }
+
 async fn find_user(client: &Client, identifier: &str) -> Result<User, LoginError> {
     let stmt = match  client.prepare(
         "SELECT id, username, password, salt, email, spotifytoken, liked_songs, disliked_songs
