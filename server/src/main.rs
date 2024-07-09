@@ -43,6 +43,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let (client, connection) = tokio_postgres::connect(&database_url, NoTls).await.unwrap();
 
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("connection error: {}", e);
+        }
+    });
+
     let app = Router::new().merge(get_routes()).layer(Extension(Arc::new(client)));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
