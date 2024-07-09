@@ -85,7 +85,7 @@ async fn find_user(client: &Client, identifier: &str) -> Result<User, LoginError
             salt: row.get("salt"),
             email: row.get("email"),
             spotifytoken: row.get("spotifytoken"),
-            liked_songs: row.get("liked_songs")?,
+            liked_songs: row.get("liked_songs"),
             disliked_songs: row.get("disliked_songs"),
             })
         },
