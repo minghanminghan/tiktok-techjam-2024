@@ -13,8 +13,8 @@ pub struct User {
    pub salt: String,
    pub email: String,
    pub spotifytoken: Option<SpotifyToken>,
-   pub liked_songs: Vec<i32>,
-   pub disliked_songs: Vec<i32>
+   pub liked_songs: Option<Vec<i32>>,
+   pub disliked_songs: Option<Vec<i32>>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
