@@ -62,7 +62,7 @@ pub async fn create_user(client: &Client, new_user: NewUser) -> Result<User, Reg
     let stmt = match client.prepare(
         "INSERT INTO users (username, password, salt, email)
         VALUES ($1, $2, $3, $4)
-        RETURNING id"
+        RETURNING id, username, password, salt, email, spotifytoken, liked_songs, disliked_songs"
     ).await {
         Ok(q) => q,
         Err(_) => return Err(RegistrationError {
@@ -72,7 +72,16 @@ pub async fn create_user(client: &Client, new_user: NewUser) -> Result<User, Reg
     };
 
     match client.query_one(&stmt, &[&new_user.username, &new_user.password, &new_user.salt, &new_user.email]).await {
-        Ok(row) => Ok(row.get("id")),
+        Ok(row) => Ok(User {
+            id: row.get("id"),
+            username: row.get("username"),
+            password: row.get("password"),
+            salt: row.get("salt"),
+            email: row.get("email"),
+            spotifytoken: row.get("spotifytoken"),
+            liked_songs: row.get("liked_songs"),
+            disliked_songs: row.get("disliked_songs"),
+        }),
         Err(_) => Err(RegistrationError {
             kind: "UserIdFetchFailed".to_string(),
             message: "Failed to fetch the user id".to_string()
