@@ -31,7 +31,7 @@ impl Debug for RegistrationError {
 }
 
 pub async fn register(client: &Client, username: &str, email: &str, password: &str) -> Result<User, RegistrationError> {
-    if !is_avaliable(client, username, email).await {
+    if is_avaliable(client, username, email).await {
         return Err(RegistrationError{
             kind: "UsernameEmailInUse".to_string(),
             message: "The provided username or email is already in use".to_string()
