@@ -26,20 +26,27 @@ pub fn spotify_routes() -> Router {
         .route("/api/v1/spotify/fetch",post(post_spotify_fetch))
 }
 
-async fn post_spotify_login(Extension(client): Extension<Arc<Client>>, Json(payload): Json<SpotifyInput>, jar: CookieJar) -> Response {
+async fn post_spotify_login(Extension(client): Extension<Arc<Client>>, jar: CookieJar) -> Response {
 
     let jwt = match jar.get("token") {
-        Ok(t) => t,
-        Err(_) => return Response::builder()
+        Some(t) => t,
+        None => return Response::builder()
             .status(status::StatusCode::UNAUTHORIZED)
-            .body("No cookie")
+            .body(Body::from("No cookie"))
             .unwrap()
     };
-    let claims = match verify_jwt(jwt) {
+    let claims = match verify_jwt(&jwt.to_string()) {
         Ok(c) => c,
         Err(_) => return Response::builder()
             .status(status::StatusCode::UNAUTHORIZED)
-            .body("Unauthorized cookie")
+            .body(Body::from("Unauthorized cookie"))
+            .unwrap()
+    };
+    let user_id: i32 = match claims.sub.parse::<i32>() {
+        Ok(i) => i,
+        Err(_) => return Response::builder()
+            .status(status::StatusCode::UNAUTHORIZED)
+            .body(Body::from("Invalid cookie sub"))
             .unwrap()
     };
     
@@ -56,43 +63,48 @@ async fn post_spotify_login(Extension(client): Extension<Arc<Client>>, Json(payl
     Json(token).into_response()
 }
 
-async fn post_spotify_swipe(Extension(client): Extension<Arc<Client>>, Json(payload): Json<SpotifyInput>) -> Response {
+async fn post_spotify_swipe(Extension(client): Extension<Arc<Client>>, Json(payload): Json<SpotifyInput>, jar: CookieJar) -> Response {
 
-    let user_id: i32 = match payload.user_id.parse() {
-        Ok(u) => u,
-        Err(_) => {
-        return Response::builder()
-            .status(status::StatusCode::BAD_REQUEST)
-            .header("Content-Type","plain/text")
-            .body(Body::from("Not a valid user_id"))
+    let jwt = match jar.get("token") {
+        Some(t) => t,
+        None => return Response::builder()
+            .status(status::StatusCode::UNAUTHORIZED)
+            .body(Body::from("No cookie"))
             .unwrap()
-        },
     };
-    let token = match spotify::auth::spotify_auth(client, user_id).await {
-        Ok(t) => t,
-        Err(err) => {
-        return Response::builder()
-            .status(status::StatusCode::BAD_REQUEST)
-            .header("Content-Type","plain/text")
-            .body(Body::from(err.to_string()))
+    let claims = match verify_jwt(jwt) {
+        Ok(c) => c,
+        Err(_) => return Response::builder()
+            .status(status::StatusCode::UNAUTHORIZED)
+            .body(Body::from("Unauthorized cookie"))
             .unwrap()
-        },
     };
-    Json(token).into_response()
+    let user_id = claims.sub.parse();
+
+    match spotify::swipe::like_song(payload.song).await {
+        Ok(_) => "Sucessfully swiped".into_response(),
+        Err(err) => "".into_response()
+    }
 }
 
-async fn post_spotify_fetch(Extension(client): Extension<Arc<Client>>, Json(payload): Json<SpotifyInput>) -> Response {
+async fn post_spotify_fetch(Extension(client): Extension<Arc<Client>>, Json(payload): Json<SpotifyInput>, jar: CookieJar) -> Response {
 
-    let user_id: i32 = match payload.user_id.parse() {
-        Ok(u) => u,
-        Err(_) => {
-        return Response::builder()
-            .status(status::StatusCode::BAD_REQUEST)
-            .header("Content-Type","plain/text")
-            .body(Body::from("Not a valid user_id"))
+    let jwt = match jar.get("token") {
+        Some(t) => t,
+        None => return Response::builder()
+            .status(status::StatusCode::UNAUTHORIZED)
+            .body(Body::from("No cookie"))
             .unwrap()
-        },
     };
+    let claims = match verify_jwt(jwt) {
+        Ok(c) => c,
+        Err(_) => return Response::builder()
+            .status(status::StatusCode::UNAUTHORIZED)
+            .body(Body::from("Unauthorized cookie"))
+            .unwrap()
+    };
+    let user_id = claims.sub.parse();
+
     let token = match spotify::auth::spotify_auth(client, user_id).await {
         Ok(t) => t,
         Err(err) => {

@@ -22,7 +22,7 @@ impl Debug for SwipeError {
     }
 }
 
-async fn like_song(client: &Client, user_id: i32, song_id: i32) -> Result<(), SwipeError> {
+pub async fn like_song(client: &Client, user_id: i32, song_id: i32) -> Result<(), SwipeError> {
     let stmt = match client.prepare(
         "UPDATE users
         SET liked_songs = ARRAY_APPEND(COALESCE(liked_songs, ARRAY[]::INTEGER[]), $1)

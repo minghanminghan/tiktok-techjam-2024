@@ -112,8 +112,8 @@ fn authenticate_user(password: &str, hash: &str) -> Result<bool, LoginError> {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
-    sub: String, // The subject of the token (typically the user ID)
-    exp: usize,  // Expiration time (as seconds since the epoch)
+    pub sub: String, // The subject of the token (typically the user ID)
+    pub exp: usize,  // Expiration time (as seconds since the epoch)
 }
 
 fn generate_jwt(user_id: &str) -> Result<String, jsonwebtoken::errors::Error> {

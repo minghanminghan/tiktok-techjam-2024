@@ -227,6 +227,7 @@ async fn refresh_token(client: Client, user_id: i32, token: SpotifyToken) -> Res
         .await?;
 
     if response.status().is_success() {
+        drop(token);
         let new_token: SpotifyToken = response.json().await?;
         match add_spotify_token(&client, user_id, new_token).await {
             Ok(_) => {},
