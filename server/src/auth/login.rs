@@ -111,7 +111,7 @@ fn authenticate_user(password: &str, hash: &str) -> Result<bool, LoginError> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Claims {
+pub struct Claims {
     pub sub: String, // The subject of the token (typically the user ID)
     pub exp: usize,  // Expiration time (as seconds since the epoch)
 }
